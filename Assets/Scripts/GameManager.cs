@@ -25,9 +25,10 @@ public class GameManager : MonoBehaviour {
             DirectoryInfo info = new DirectoryInfo(beatmapRepository);
             FileInfo[] fileInfo = info.GetFiles(".osu");
 
-            foreach(File file in fileInfo){
-                OsuParsers.Beatmaps.Beatmap beatmap = OsuParsers.Decoders.BeatmapDecoder.Decode(file);
-                beatmaps.Add(beatmap);
+            foreach(FileInfo file in fileInfo){
+                print(file.FullName);
+                // OsuParsers.Beatmaps.Beatmap beatmap = OsuParsers.Decoders.BeatmapDecoder.Decode();
+                // beatmaps.Add(beatmap);
             }
         } else {
             Destroy(gameObject);
@@ -35,7 +36,7 @@ public class GameManager : MonoBehaviour {
     }
 
     public void StartBeatmap(OsuParsers.Beatmap.Beatmap beatmap){
-        if (gameState.Started){
+        if (gameState == GameState.Started){
             return;
         }
 
