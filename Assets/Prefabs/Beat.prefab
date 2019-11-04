@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 834262556274940227}
   - component: {fileID: 834262556274940224}
   - component: {fileID: 834262556274940225}
+  - component: {fileID: 3889930829600388413}
   m_Layer: 0
   m_Name: Beat
   m_TagString: Untagged
@@ -58,7 +59,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 679eab38077b16b4cb9350f052e2b63d, type: 2}
+  - {fileID: 2100000, guid: 7789ebc689cd81341960db9ce62c228b, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -92,3 +93,15 @@ SphereCollider:
   serializedVersion: 2
   m_Radius: 0.5000001
   m_Center: {x: 0, y: -0.00000023841858, z: 0}
+--- !u!114 &3889930829600388413
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 834262556274940286}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7be690c6081d9eb4f91bbf4e14c6ae09, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

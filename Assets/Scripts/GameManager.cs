@@ -25,8 +25,14 @@ public class GameManager : MonoBehaviour {
         if (instance == null){
             instance = this;
 
-            // Clear out Temp folder.
             DirectoryInfo tempInfo = new DirectoryInfo(beatmapTempPath);
+
+            // Create Temp folder if doesn't exist.
+            if (!tempInfo.Exists){
+                tempInfo.Create();
+            }
+
+            // Clear out Temp folder.
             foreach(FileInfo tempFile in tempInfo.GetFiles()){
                 tempFile.Delete();
             }
@@ -63,7 +69,7 @@ public class GameManager : MonoBehaviour {
                 }
             }
 
-            StartBeatmap(beatmapsDictionary["24664 DOES - Donten (TV Size).osz"][1]);
+            StartBeatmap(beatmapsDictionary["24664 DOES - Donten (TV Size).osz"][4]);
         } else {
             Destroy(gameObject);
         }

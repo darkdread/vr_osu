@@ -155,7 +155,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 667c1520ba89de64e9288f75726d4fd2, type: 2}
+  - {fileID: 2100000, guid: 4f039e76a85f103419940e99bef9f090, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -222,7 +222,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 194561810}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.5, z: -4}
+  m_LocalPosition: {x: 0, y: 1.5, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 97499699}
@@ -318,7 +318,7 @@ Transform:
   m_GameObject: {fileID: 291761228}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 10, y: 0.1, z: 10}
+  m_LocalScale: {x: 10, y: 0.1, z: 100}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 4
@@ -386,7 +386,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 91ba4a4e1daac474d931753700a845bc, type: 2}
+  - {fileID: 2100000, guid: 7789ebc689cd81341960db9ce62c228b, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -533,14 +533,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 742094144}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 61dd73e7feb5fd2498661a33ca42c74a, type: 3}
+  m_Script: {fileID: 11500000, guid: ae2a3093cdd55fa40873ead124519380, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  beatPrefab: {fileID: 834262556274940286, guid: 8ecaa21fefad4b54e801ae71e1a0cc71,
+  beats: []
+  beatPrefab: {fileID: 3889930829600388413, guid: 509e6e32798c5ca44a146ab1029b56ad,
     type: 3}
   beatHolder: {fileID: 1879158150}
   beatMarker: {fileID: 434374438}
-  beatSpawnDelay: -3000
+  beatHitPerfectMs: 100
+  beatHitOkayMs: 300
+  beatSpeed: 10
+  approachRate: 0
   songDuration: 0
   songTimer: 0
 --- !u!4 &742094146
@@ -704,7 +708,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 679eab38077b16b4cb9350f052e2b63d, type: 2}
+  - {fileID: 2100000, guid: 6a09d1c510f405f40858eb625e3a385c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -840,7 +844,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2031660467}
   m_LocalRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
-  m_LocalPosition: {x: 0, y: 3, z: -5.5}
+  m_LocalPosition: {x: 0, y: 3, z: -1.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -872,7 +876,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 2121823068}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8a9eab22afae09d47909a37b36e865ae, type: 3}
+  m_Script: {fileID: 11500000, guid: f6222c46578b977469692090c94620c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!4 &2121823070
