@@ -8,11 +8,12 @@ public enum Drum {
 }
 
 public enum Score {
-    Great,
-    Okay,
-    Miss
+    Great = 300,
+    Okay = 100,
+    Miss = 0
 }
 
+[RequireComponent(typeof(AudioSource))]
 [RequireComponent(typeof(AudioSource))]
 public class BeatmapGame : MonoBehaviour {
     
@@ -23,9 +24,11 @@ public class BeatmapGame : MonoBehaviour {
     public Beat beatPrefab;
     public Transform beatHolder;
     public Transform beatMarker;
+    public AudioClip drumSfx;
 
-    public int beatHitPerfectMs = 100;
-    public int beatHitOkayMs = 300;
+    public int beatHitGreatMs = 50;
+    public int beatHitOkayMs = 100;
+    public int beatHitMissMs = 300;
     public float beatSpeed = 3f;
 
     public float approachRate;
@@ -35,12 +38,14 @@ public class BeatmapGame : MonoBehaviour {
     private int approachMs = 1800;
     private int closestBeat = 0;
     private int latestSpawnedBeat = 0;
-    private AudioSource audioSource;
+    private AudioSource musicSource;
+    private AudioSource sfxSource;
 
     void Awake(){
         if (instance == null){
             instance = this;
-            audioSource = GetComponent<AudioSource>();
+            musicSource = GetComponents<AudioSource>()[0];
+            sfxSource = GetComponents<AudioSource>()[1];
         } else {
             Destroy(gameObject);
         }
@@ -81,11 +86,15 @@ public class BeatmapGame : MonoBehaviour {
     }
 
     private void PlayBeatmapSong(AudioClip audioClip){
-        audioSource.clip = audioClip;
-        audioSource.time = songTimer;
-        audioSource.Play();
+        // Start song with delay of approachMs.
+        StartCoroutine(DelayPlay(audioClip, approachMs * 2));
+    }
 
-        songTimer = 20;
+    private IEnumerator DelayPlay(AudioClip audioClip, int ms){
+        yield return new WaitForSeconds((float) ms/1000);
+
+        musicSource.clip = audioClip;
+        musicSource.Play();
 
         GameManager.gameState = GameManager.gameState | GameState.Started;
     }
@@ -120,8 +129,8 @@ public class BeatmapGame : MonoBehaviour {
             return;
         }
 
-        songTimer += (int) (Time.deltaTime * 1000);
-        // songTimer = (int)(audioSource.time * 1000);
+        // songTimer += (int) (1);
+        songTimer = (int)(musicSource.time * 1000);
 
         if (songTimer >= songDuration){
             OnSongEnd();
@@ -142,16 +151,17 @@ public class BeatmapGame : MonoBehaviour {
             Beat beat = beats[i];
             Transform beatTransform = beat.transform;
 
-            beatTransform.position += -Vector3.forward * Time.deltaTime * beatSpeed;
+            beatTransform.position += -Vector3.forward * (Time.deltaTime * musicSource.pitch) * beatSpeed;
 
-            // Test beat.
-            if (beat.hitObject.StartTime + beat.delay < songTimer){
+            // Perfect time formula: beat.hitObject.StartTime + beat.delay <= songTimer
+            if (beat.hitObject.StartTime + beat.delay <= songTimer){
                 HitDrum(Drum.Left);
             }
 
-            // if (beat.hitObject.EndTime < songTimer){
-            //     ScoreBeat(beat, Score.Miss);
-            // }
+            // Miss.
+            if (beat.hitObject.StartTime + beat.delay + beatHitOkayMs < songTimer){
+                ScoreBeat(beat);
+            }
         }
 
         if (Input.GetKeyDown(KeyCode.X) || Input.GetKeyDown(KeyCode.Z)){
@@ -159,11 +169,26 @@ public class BeatmapGame : MonoBehaviour {
         }
     }
 
-    private void ScoreBeat(Beat beat, Score score){
+    private Score CalculateScore(Beat beat){
+        Score score = Score.Miss;
+        int startTime = beat.hitObject.StartTime + beat.delay;
+
+        print(string.Format("startTime: {0}, hitTime: {1}", startTime, songTimer));
+
+        if (Mathf.Abs(songTimer - startTime) <= beatHitGreatMs){
+            score = Score.Great;
+        } else if (Mathf.Abs(songTimer - startTime) <= beatHitOkayMs){
+            score = Score.Okay;
+        }
+
+        return score;
+    }
+
+    private void ScoreBeat(Beat beat){
         beat.gameObject.SetActive(false);
         closestBeat += 1;
 
-        print(score);
+        GameManager.UpdateScore((int) CalculateScore(beat));
     }
 
     // https://osu.ppy.sh/help/wiki/Beatmap_Editor/Song_Setup#approach-rate
@@ -181,19 +206,28 @@ public class BeatmapGame : MonoBehaviour {
         // Get closest beat within song timer.
         Beat beat = GetClosestBeat();
 
-        int startTime = beat.hitObject.StartTime + beat.delay;
+        if (beat){
+            int startTime = beat.hitObject.StartTime + beat.delay;
 
-        if (Mathf.Abs(songTimer - startTime) <= beatHitPerfectMs){
-            ScoreBeat(beat, Score.Great);
-        } else if (Mathf.Abs(songTimer - startTime) <= beatHitOkayMs){
-            ScoreBeat(beat, Score.Okay);
-        } else {
-            ScoreBeat(beat, Score.Miss);
+            // startTime > songTimer = +offset
+            // startTime < songTimer = -offset
+            // startTime == songTimer = 0
+            if (startTime - beatHitMissMs >= songTimer){
+                print("Don't register drum hits.");
+                return;
+            }
+
+            sfxSource.PlayOneShot(drumSfx);
+            ScoreBeat(beat);
         }
     }
 
     public Beat GetClosestBeat(){
-        return beats[closestBeat];
+        if (beats.Count > closestBeat){
+            return beats[closestBeat];
+        }
+
+        return null;
     }
 
     private void SpawnHitObject(OsuParsers.Beatmaps.Objects.HitObject hitObject){
@@ -205,6 +239,7 @@ public class BeatmapGame : MonoBehaviour {
         } else if (hitObject is OsuParsers.Beatmaps.Objects.Taiko.TaikoDrumroll){
             OsuParsers.Beatmaps.Objects.Taiko.TaikoDrumroll taikoDrumroll = (OsuParsers.Beatmaps.Objects.Taiko.TaikoDrumroll) hitObject;
 
+            SpawnSlider(taikoDrumroll);
         } else {
             SpawnBeat(hitObject);
         }
@@ -233,7 +268,7 @@ public class BeatmapGame : MonoBehaviour {
         // slider by itself should count as 2 beats.
 
         for(int i = 0; i < slider.Repeats + 1; i++){
-            print(((slider.EndTime - slider.StartTime) / slider.Repeats) * i);
+            // print(((slider.EndTime - slider.StartTime) / slider.Repeats) * i);
             SpawnBeat((OsuParsers.Beatmaps.Objects.HitObject) slider, ((slider.EndTime - slider.StartTime) / slider.Repeats) * i);
         }
     }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.UI;
 using System.IO;
 using System.IO.Compression;
 
@@ -20,10 +21,20 @@ public class GameManager : MonoBehaviour {
     public static string beatmapTempPath = @"Assets/Beatmaps/Temp/";
 
     private static Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>> beatmapsDictionary = new Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>>();
+
+    public int score;
+    public Text scoreText;
+
+    private void SetQuality(){
+        QualitySettings.vSyncCount = 0;
+        Application.targetFrameRate = 144;
+    }
     
     void Awake(){
         if (instance == null){
             instance = this;
+
+            SetQuality();
 
             DirectoryInfo tempInfo = new DirectoryInfo(beatmapTempPath);
 
@@ -69,7 +80,7 @@ public class GameManager : MonoBehaviour {
                 }
             }
 
-            StartBeatmap(beatmapsDictionary["24664 DOES - Donten (TV Size).osz"][4]);
+            StartBeatmap(beatmapsDictionary["24084 Team Nekokan - Can't Defeat Airman.osz"][3]);
         } else {
             Destroy(gameObject);
         }
@@ -156,10 +167,17 @@ public class GameManager : MonoBehaviour {
         gameState = gameState & ~GameState.Started;
     }
 
-    // Update is called once per frame
-    void Update(){
-        // print((int) gameState);
-        
+    public static void UpdateScore(int value){
+        instance.score += value;
+
+        UpdateScoreText(instance.score.ToString());
+    }
+
+    public static void UpdateScoreText(string score){
+        instance.scoreText.text = "Score: " + score.PadLeft(9, '0');
+    }
+
+    private void Update(){
         if ((gameState & GameState.Started) == GameState.Started){
 
             if (Input.GetKeyDown(KeyCode.Escape)){
