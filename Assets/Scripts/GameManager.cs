@@ -17,8 +17,12 @@ public class GameManager : MonoBehaviour {
     public static GameState gameState; 
     
     // https://github.com/mrflashstudio/OsuParsers.
-    public static string beatmapRepositoryPath = @"Assets/Beatmaps/";
-    public static string beatmapTempPath = @"Assets/Beatmaps/Temp/";
+    public static string beatmapRepositoryPath = "Assets/Beatmaps/";
+    public static string beatmapExtractedPath = "Assets/Beatmaps/Temp/";
+
+    public static string currentBeatmapOszName;
+    public static int currentBeatmapOsuId;
+    public static bool production = false;
 
     private static Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>> beatmapsDictionary = new Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>>();
 
@@ -36,7 +40,12 @@ public class GameManager : MonoBehaviour {
 
             SetQuality();
 
-            DirectoryInfo tempInfo = new DirectoryInfo(beatmapTempPath);
+            if (production){
+                beatmapRepositoryPath = Path.Combine(Application.persistentDataPath, beatmapRepositoryPath);
+                beatmapExtractedPath = Path.Combine(Application.persistentDataPath, beatmapExtractedPath);
+            }
+
+            DirectoryInfo tempInfo = new DirectoryInfo(beatmapExtractedPath);
 
             // Create Temp folder if doesn't exist.
             if (!tempInfo.Exists){
@@ -44,8 +53,10 @@ public class GameManager : MonoBehaviour {
             }
 
             // Clear out Temp folder.
-            foreach(FileInfo tempFile in tempInfo.GetFiles()){
-                tempFile.Delete();
+            if (!production){
+                // foreach(FileInfo tempFile in tempInfo.GetFiles()){
+                //     tempFile.Delete();
+                // }
             }
 
             // Get all osz files.
@@ -58,13 +69,24 @@ public class GameManager : MonoBehaviour {
                 List<OsuParsers.Beatmaps.Beatmap> beatmaps = new List<OsuParsers.Beatmaps.Beatmap>();
                 beatmapsDictionary.Add(oszFile.Name, beatmaps);
 
+                // Create folder for osz. Skip adding osz if directory already exist.
+                DirectoryInfo oszDirectory = new DirectoryInfo(beatmapExtractedPath + oszFile.Name);
+
+                if (!oszDirectory.Exists){
+                    oszDirectory.Create();
+                } else {
+                    beatmaps = LoadBeatmapsFromFolder(oszDirectory.FullName);
+                    beatmapsDictionary[oszFile.Name] = beatmaps;
+                    continue;
+                }
+
                 // Loop through zipped content.
                 foreach(ZipArchiveEntry entry in zipArchive.Entries){
+                    string extractOsuPath = Path.Combine(oszDirectory.FullName, entry.FullName);
+                    // print(extractOsuPath);
 
                     // Osu file, parse to beatmap.
                     if (entry.FullName.EndsWith(".osu")){
-                        string extractOsuPath = Path.Combine(beatmapTempPath + entry.FullName);
-
                         entry.ExtractToFile(extractOsuPath);
 
                         OsuParsers.Beatmaps.Beatmap beatmap = OsuParsers.Decoders.BeatmapDecoder.Decode(extractOsuPath);
@@ -72,22 +94,36 @@ public class GameManager : MonoBehaviour {
                     }
 
                     // Mp3 file, assume it's the song..
-                    if (entry.FullName.EndsWith(".mp3")){
-                        string extractOsuPath = Path.Combine(beatmapTempPath + entry.FullName);
-
+                    if (entry.FullName.ToLower().EndsWith(".mp3")){
                         entry.ExtractToFile(extractOsuPath);
                     }
                 }
             }
 
-            StartBeatmap(beatmapsDictionary["24084 Team Nekokan - Can't Defeat Airman.osz"][3]);
+            // StartBeatmap("411894 Remo Prototype[CV_ Hanamori Yumiri] - Sendan Life.osz", 2);
+            StartBeatmap("554568 CHiCO with HoneyWorks - Pride Kakumei.osz", 2);
         } else {
             Destroy(gameObject);
         }
     }
 
+    public static List<OsuParsers.Beatmaps.Beatmap> LoadBeatmapsFromFolder(string path){
+        List<OsuParsers.Beatmaps.Beatmap> beatmaps = new List<OsuParsers.Beatmaps.Beatmap>();
+        DirectoryInfo directoryInfo = new DirectoryInfo(path);
+
+        foreach(FileInfo fileInfo in directoryInfo.GetFiles()){
+            // Osu file, parse to beatmap.
+            if (fileInfo.FullName.EndsWith(".osu")){
+                OsuParsers.Beatmaps.Beatmap beatmap = OsuParsers.Decoders.BeatmapDecoder.Decode(fileInfo.FullName);
+                beatmaps.Add(beatmap);
+            }
+        }
+
+        return beatmaps;
+    }
+
     public static IEnumerator GetBeatmapAudioClip(OsuParsers.Beatmaps.Beatmap beatmap, System.Action<AudioClip> callback){
-        DirectoryInfo info = new DirectoryInfo(beatmapTempPath);
+        DirectoryInfo info = new DirectoryInfo(Path.Combine(beatmapExtractedPath, currentBeatmapOszName));
         FileInfo audioFile = info.GetFiles(beatmap.GeneralSection.AudioFilename)[0];
 
         print("file://" + audioFile.FullName);
@@ -155,16 +191,22 @@ public class GameManager : MonoBehaviour {
         return l_oAudioClip;
     }
 
-    public void StartBeatmap(OsuParsers.Beatmaps.Beatmap beatmap){
+    public void StartBeatmap(string oszName, int osuId){
+        OsuParsers.Beatmaps.Beatmap beatmap = beatmapsDictionary[oszName][osuId];
+        
         if ((gameState & GameState.Started) == GameState.Started){
-            return;
+            gameState = gameState & ~GameState.Started;
         }
 
+        currentBeatmapOszName = oszName;
+        currentBeatmapOsuId = osuId;
         BeatmapGame.instance.StartBeatmap(beatmap);
     }
 
     public static void Stop(){
         gameState = gameState & ~GameState.Started;
+
+        instance.StartBeatmap(currentBeatmapOszName, currentBeatmapOsuId);
     }
 
     public static void UpdateScore(int value){
@@ -182,6 +224,10 @@ public class GameManager : MonoBehaviour {
 
             if (Input.GetKeyDown(KeyCode.Escape)){
                 Pause((gameState & GameState.Paused) != GameState.Paused);
+            }
+
+            if (Input.GetKeyDown(KeyCode.R)){
+                StartBeatmap(currentBeatmapOszName, currentBeatmapOsuId);
             }
         }
     }

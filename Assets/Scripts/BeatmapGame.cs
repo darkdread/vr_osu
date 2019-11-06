@@ -13,17 +13,24 @@ public enum Score {
     Miss = 0
 }
 
+[System.Serializable]
+public class DrumTransformPair {
+    public Drum drum;
+    public Transform transform;
+}
+
 [RequireComponent(typeof(AudioSource))]
 [RequireComponent(typeof(AudioSource))]
 public class BeatmapGame : MonoBehaviour {
     
     public static BeatmapGame instance;
+    // public static Dictionary<Drum, Transform> beatMarkers = new Dictionary<Drum, Transform>();
     public List<OsuParsers.Beatmaps.Objects.HitObject> hitObjects = new List<OsuParsers.Beatmaps.Objects.HitObject>();
     public List<Beat> beats = new List<Beat>();
 
+    public List<DrumTransformPair> drumTransformPairs = new List<DrumTransformPair>();
     public Beat beatPrefab;
     public Transform beatHolder;
-    public Transform beatMarker;
     public AudioClip drumSfx;
 
     public int beatHitGreatMs = 50;
@@ -35,15 +42,37 @@ public class BeatmapGame : MonoBehaviour {
     public int songDuration;
     public int songTimer;
 
+    public int songStartTimer = 0;
+
+    private int defaultApproachMs = 3000;
     private int approachMs = 1800;
     private int closestBeat = 0;
     private int latestSpawnedBeat = 0;
     private AudioSource musicSource;
     private AudioSource sfxSource;
 
+    private Drum ColorToDrum(OsuParsers.Enums.Beatmaps.TaikoColor color){
+        if (color == OsuParsers.Enums.Beatmaps.TaikoColor.Blue){
+            return Drum.Left;
+        }
+
+        return Drum.Right;
+    }
+
+    private DrumTransformPair GetDrumTransformPair(Drum drum){
+        for(int i = 0; i < drumTransformPairs.Count; i++){
+            if (drumTransformPairs[i].drum == drum){
+                return drumTransformPairs[i];
+            }
+        }
+
+        return null;
+    }
+
     void Awake(){
         if (instance == null){
             instance = this;
+            // beatMarkers.Add(Drum.Left, );
             musicSource = GetComponents<AudioSource>()[0];
             sfxSource = GetComponents<AudioSource>()[1];
         } else {
@@ -65,8 +94,18 @@ public class BeatmapGame : MonoBehaviour {
         songDuration = beatmap.HitObjects[beatmap.HitObjects.Count - 1].EndTime;
         approachRate = beatmap.DifficultySection.ApproachRate;
         approachMs = CalculateApproachMs();
+
+        // Clear all old vars.
         songTimer = 0;
         latestSpawnedBeat = 0;
+        closestBeat = 0;
+        musicSource.Stop();
+
+        for(int i = 0; i < beats.Count; i++){
+            Destroy(beats[i].gameObject);
+        }
+
+        beats.Clear();
 
         // songTimer = 10000;
 
@@ -87,13 +126,15 @@ public class BeatmapGame : MonoBehaviour {
 
     private void PlayBeatmapSong(AudioClip audioClip){
         // Start song with delay of approachMs.
-        StartCoroutine(DelayPlay(audioClip, approachMs * 2));
+        songTimer = songStartTimer;
+        StartCoroutine(DelayPlay(audioClip, approachMs));
     }
 
     private IEnumerator DelayPlay(AudioClip audioClip, int ms){
         yield return new WaitForSeconds((float) ms/1000);
 
         musicSource.clip = audioClip;
+        musicSource.time = songTimer / 1000;
         musicSource.Play();
 
         GameManager.gameState = GameManager.gameState | GameState.Started;
@@ -154,26 +195,44 @@ public class BeatmapGame : MonoBehaviour {
             beatTransform.position += -Vector3.forward * (Time.deltaTime * musicSource.pitch) * beatSpeed;
 
             // Perfect time formula: beat.hitObject.StartTime + beat.delay <= songTimer
-            if (beat.hitObject.StartTime + beat.delay <= songTimer){
-                HitDrum(Drum.Left);
+            if (beat.hitObject.StartTime + beat.delay - beatHitGreatMs / 2 <= songTimer){
+                if (beat.color == OsuParsers.Enums.Beatmaps.TaikoColor.Blue){
+                    HitDrum(Drum.Left);
+                } else {
+                    HitDrum(Drum.Right);
+                }
             }
 
             // Miss.
             if (beat.hitObject.StartTime + beat.delay + beatHitOkayMs < songTimer){
-                ScoreBeat(beat);
+                ScoreBeat(beat, Drum.Left);
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.X) || Input.GetKeyDown(KeyCode.Z)){
+        if (Input.GetKeyDown(KeyCode.X)){
+            HitDrum(Drum.Right);
+        }
+
+        if (Input.GetKeyDown(KeyCode.Z)){
             HitDrum(Drum.Left);
         }
     }
 
-    private Score CalculateScore(Beat beat){
+    private Score CalculateScore(Beat beat, Drum drum){
         Score score = Score.Miss;
         int startTime = beat.hitObject.StartTime + beat.delay;
 
-        print(string.Format("startTime: {0}, hitTime: {1}", startTime, songTimer));
+        print(string.Format("startTime: {0}, hitTime: {1}, color: {2}, drum: {3}", startTime, songTimer, beat.color, drum));
+
+        // Blue and not left hit.
+        if (beat.color == OsuParsers.Enums.Beatmaps.TaikoColor.Blue && drum != Drum.Left){
+            return score;
+        }
+
+        // Right and not right hit.
+        if (beat.color == OsuParsers.Enums.Beatmaps.TaikoColor.Red && drum != Drum.Right){
+            return score;
+        }
 
         if (Mathf.Abs(songTimer - startTime) <= beatHitGreatMs){
             score = Score.Great;
@@ -184,16 +243,16 @@ public class BeatmapGame : MonoBehaviour {
         return score;
     }
 
-    private void ScoreBeat(Beat beat){
+    private void ScoreBeat(Beat beat, Drum drum){
         beat.gameObject.SetActive(false);
         closestBeat += 1;
 
-        GameManager.UpdateScore((int) CalculateScore(beat));
+        GameManager.UpdateScore((int) CalculateScore(beat, drum));
     }
 
     // https://osu.ppy.sh/help/wiki/Beatmap_Editor/Song_Setup#approach-rate
     private int CalculateApproachMs(){
-        int approachMs = 1800;
+        int approachMs = defaultApproachMs;
         
         if (approachRate < 5){
             return approachMs - (int) approachRate * 120;
@@ -218,7 +277,7 @@ public class BeatmapGame : MonoBehaviour {
             }
 
             sfxSource.PlayOneShot(drumSfx);
-            ScoreBeat(beat);
+            ScoreBeat(beat, drum);
         }
     }
 
@@ -251,11 +310,29 @@ public class BeatmapGame : MonoBehaviour {
         beat.delay = delay;
 
         beat.name = beat.name + latestSpawnedBeat;
-        beat.transform.position = beatMarker.position + Vector3.forward * ((float)(hitObject.StartTime + delay - songTimer)/(1000f / beatSpeed));
 
         if (hitObject is OsuParsers.Beatmaps.Objects.Slider){
             beat.GetComponent<MeshRenderer>().material.color = Color.black;
         }
+
+        if (hitObject is OsuParsers.Beatmaps.Objects.Taiko.TaikoHit){
+            OsuParsers.Beatmaps.Objects.Taiko.TaikoHit taikoHit = (OsuParsers.Beatmaps.Objects.Taiko.TaikoHit) hitObject;
+            beat.color = taikoHit.Color;
+        } else {
+            // Color randomizer logic here.
+        }
+
+        if (beat.color == OsuParsers.Enums.Beatmaps.TaikoColor.Blue){
+            beat.GetComponent<MeshRenderer>().material.color = Color.blue;
+            beat.transform.Find("Line").GetComponent<MeshRenderer>().material.color = Color.blue;
+            beat.transform.Find("Line").GetComponent<MeshRenderer>().material.SetColor("_EmissionColor", Color.blue * 0.5f);
+        } else {
+            beat.GetComponent<MeshRenderer>().material.color = Color.red;
+            beat.transform.Find("Line").GetComponent<MeshRenderer>().material.color = Color.red;
+            beat.transform.Find("Line").GetComponent<MeshRenderer>().material.SetColor("_EmissionColor", Color.red * 0.5f);
+        }
+
+        beat.transform.position = GetDrumTransformPair(ColorToDrum(beat.color)).transform.position + Vector3.forward * ((float)(hitObject.StartTime + delay - songTimer)/(1000f / beatSpeed));
 
         beats.Add(beat);
         latestSpawnedBeat += 1;
