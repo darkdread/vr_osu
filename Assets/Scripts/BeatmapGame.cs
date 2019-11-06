@@ -33,9 +33,9 @@ public class BeatmapGame : MonoBehaviour {
     public Transform beatHolder;
     public AudioClip drumSfx;
 
-    public int beatHitGreatMs = 50;
-    public int beatHitOkayMs = 100;
-    public int beatHitMissMs = 300;
+    public int beatHitGreatMs = 30;
+    public int beatHitOkayMs = 50;
+    public int beatHitRegisterAsHitMs = 300;
     public float beatSpeed = 3f;
 
     public float approachRate;
@@ -188,11 +188,20 @@ public class BeatmapGame : MonoBehaviour {
         }
 
         // Move beats.
-        for(int i = closestBeat; i < beats.Count; i++){
+        for(int i = 0; i < beats.Count; i++){
             Beat beat = beats[i];
             Transform beatTransform = beat.transform;
 
+            if (!beat.gameObject.activeSelf){
+                continue;
+            }
+
             beatTransform.position += -Vector3.forward * (Time.deltaTime * musicSource.pitch) * beatSpeed;
+
+            // Miss.
+            if (beat.hitObject.StartTime + beat.delay + beatHitOkayMs < songTimer){
+                ScoreBeat(beat, Drum.Left);
+            }
 
             // Perfect time formula: beat.hitObject.StartTime + beat.delay <= songTimer
             if (beat.hitObject.StartTime + beat.delay - beatHitGreatMs / 2 <= songTimer){
@@ -201,11 +210,6 @@ public class BeatmapGame : MonoBehaviour {
                 } else {
                     HitDrum(Drum.Right);
                 }
-            }
-
-            // Miss.
-            if (beat.hitObject.StartTime + beat.delay + beatHitOkayMs < songTimer){
-                ScoreBeat(beat, Drum.Left);
             }
         }
 
@@ -271,7 +275,8 @@ public class BeatmapGame : MonoBehaviour {
             // startTime > songTimer = +offset
             // startTime < songTimer = -offset
             // startTime == songTimer = 0
-            if (startTime - beatHitMissMs >= songTimer){
+
+            if (songTimer + beatHitRegisterAsHitMs <= startTime){
                 print("Don't register drum hits.");
                 return;
             }

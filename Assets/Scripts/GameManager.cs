@@ -101,7 +101,9 @@ public class GameManager : MonoBehaviour {
             }
 
             // StartBeatmap("411894 Remo Prototype[CV_ Hanamori Yumiri] - Sendan Life.osz", 2);
-            StartBeatmap("554568 CHiCO with HoneyWorks - Pride Kakumei.osz", 2);
+            // StartBeatmap("554568 CHiCO with HoneyWorks - Pride Kakumei.osz", 2);
+            // StartBeatmap("46862 UVERworld - CORE PRIDE (TV Size).osz", 3);
+            StartBeatmap("978759 L. V. Beethoven - Moonlight Sonata (Cranky Remix).osz", 1);
         } else {
             Destroy(gameObject);
         }

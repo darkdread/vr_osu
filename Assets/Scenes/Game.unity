@@ -804,7 +804,7 @@ Light:
   m_Enabled: 1
   serializedVersion: 9
   m_Type: 1
-  m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
@@ -909,9 +909,9 @@ MonoBehaviour:
     type: 3}
   beatHolder: {fileID: 1879158150}
   drumSfx: {fileID: 8300000, guid: 07c89efa8ad6f9943a9bda562d038565, type: 3}
-  beatHitGreatMs: 50
-  beatHitOkayMs: 100
-  beatHitMissMs: 300
+  beatHitGreatMs: 30
+  beatHitOkayMs: 50
+  beatHitRegisterAsHitMs: 200
   beatSpeed: 20
   approachRate: 0
   songDuration: 0
@@ -1218,9 +1218,9 @@ Light:
   m_Enabled: 1
   serializedVersion: 9
   m_Type: 2
-  m_Color: {r: 0.99514306, g: 1, b: 0, a: 1}
-  m_Intensity: 2
-  m_Range: 30
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Intensity: 1
+  m_Range: 83.3
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
@@ -1276,7 +1276,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 990885730}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 5, z: -1}
+  m_LocalPosition: {x: 0, y: 6.51, z: -1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -1371,6 +1371,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: Line
+      objectReference: {fileID: 0}
+    - target: {fileID: 5473718850928487989, guid: 76113d48da97c22479a60f393a258302,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5473718850928487988, guid: 76113d48da97c22479a60f393a258302,
         type: 3}
