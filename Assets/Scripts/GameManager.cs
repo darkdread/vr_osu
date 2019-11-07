@@ -26,8 +26,8 @@ public class GameManager : MonoBehaviour {
 
     private static Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>> beatmapsDictionary = new Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>>();
 
-    public int score;
     public Text scoreText;
+    public Slider songProgressSlider;
 
     private void SetQuality(){
         QualitySettings.vSyncCount = 0;
@@ -211,14 +211,16 @@ public class GameManager : MonoBehaviour {
         instance.StartBeatmap(currentBeatmapOszName, currentBeatmapOsuId);
     }
 
-    public static void UpdateScore(int value){
-        instance.score += value;
-
-        UpdateScoreText(instance.score.ToString());
-    }
-
     public static void UpdateScoreText(string score){
         instance.scoreText.text = "Score: " + score.PadLeft(9, '0');
+    }
+
+    public static void UpdateSongProgressSliderColor(Color color){
+        instance.songProgressSlider.fillRect.GetComponent<Image>().color = color;
+    }
+
+    public static void UpdateSongProgressSlider(float value){
+        instance.songProgressSlider.value = value;
     }
 
     private void Update(){

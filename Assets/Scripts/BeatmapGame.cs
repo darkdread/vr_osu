@@ -43,6 +43,7 @@ public class BeatmapGame : MonoBehaviour {
     public int songTimer;
 
     public int songStartTimer = 0;
+    public int score = 0;
 
     private int defaultApproachMs = 3000;
     private int approachMs = 1800;
@@ -99,6 +100,7 @@ public class BeatmapGame : MonoBehaviour {
         songTimer = 0;
         latestSpawnedBeat = 0;
         closestBeat = 0;
+        score = 0;
         musicSource.Stop();
 
         for(int i = 0; i < beats.Count; i++){
@@ -127,11 +129,23 @@ public class BeatmapGame : MonoBehaviour {
     private void PlayBeatmapSong(AudioClip audioClip){
         // Start song with delay of approachMs.
         songTimer = songStartTimer;
-        StartCoroutine(DelayPlay(audioClip, approachMs));
+
+        StartCoroutine(DelayPlay(audioClip, 1000));
     }
 
     private IEnumerator DelayPlay(AudioClip audioClip, int ms){
-        yield return new WaitForSeconds((float) ms/1000);
+        GameManager.UpdateSongProgressSliderColor(Color.red);
+        GameManager.UpdateSongProgressSlider((float) 1f);
+
+        // Just wait 1 second 4HEad. Because the game is lagging.
+        yield return new WaitForSeconds(1f);
+
+        for(int i = ms; i > 0; i -= (int) (Time.deltaTime * 1000f)){
+            GameManager.UpdateSongProgressSlider((float) i/ms);
+            yield return new WaitForEndOfFrame();
+        }
+
+        GameManager.UpdateSongProgressSliderColor(Color.green);
 
         musicSource.clip = audioClip;
         musicSource.time = songTimer / 1000;
@@ -172,6 +186,7 @@ public class BeatmapGame : MonoBehaviour {
 
         // songTimer += (int) (1);
         songTimer = (int)(musicSource.time * 1000);
+        GameManager.UpdateSongProgressSlider((float) songTimer/songDuration);
 
         if (songTimer >= songDuration){
             OnSongEnd();
@@ -251,7 +266,8 @@ public class BeatmapGame : MonoBehaviour {
         beat.gameObject.SetActive(false);
         closestBeat += 1;
 
-        GameManager.UpdateScore((int) CalculateScore(beat, drum));
+        score += (int) CalculateScore(beat, drum);
+        GameManager.UpdateScoreText(score.ToString());
     }
 
     // https://osu.ppy.sh/help/wiki/Beatmap_Editor/Song_Setup#approach-rate
