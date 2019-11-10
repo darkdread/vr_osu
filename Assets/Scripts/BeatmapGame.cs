@@ -2,6 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+static class ButtonsMapping {
+    public static string LeftDrum = "Left Drum";
+    public static string RightDrum = "Right Drum";
+}
+
 public enum Drum {
     Left,
     Right
@@ -24,7 +29,7 @@ public class DrumTransformPair {
 public class BeatmapGame : MonoBehaviour {
     
     public static BeatmapGame instance;
-    // public static Dictionary<Drum, Transform> beatMarkers = new Dictionary<Drum, Transform>();
+
     public List<OsuParsers.Beatmaps.Objects.HitObject> hitObjects = new List<OsuParsers.Beatmaps.Objects.HitObject>();
     public List<Beat> beats = new List<Beat>();
 
@@ -39,18 +44,22 @@ public class BeatmapGame : MonoBehaviour {
     public float beatSpeed = 3f;
 
     public float approachRate;
-    public int songDuration;
+    public int beatmapDuration;
     public int songTimer;
 
     public int songStartTimer = 0;
     public int score = 0;
+    public int combo = 0;
 
+    // Time it takes for beatmap to end after last beat.
+    private int beatmapFade = 3000;
     private int defaultApproachMs = 3000;
     private int approachMs = 1800;
     private int closestBeat = 0;
     private int latestSpawnedBeat = 0;
-    private AudioSource musicSource;
-    private AudioSource sfxSource;
+    public OsuParsers.Enums.Ruleset originalMode;
+    public AudioSource musicSource;
+    public AudioSource sfxSource;
 
     private Drum ColorToDrum(OsuParsers.Enums.Beatmaps.TaikoColor color){
         if (color == OsuParsers.Enums.Beatmaps.TaikoColor.Blue){
@@ -91,8 +100,9 @@ public class BeatmapGame : MonoBehaviour {
             return;
         }
 
+        originalMode = beatmap.GeneralSection.Mode;
         hitObjects = beatmap.HitObjects;
-        songDuration = beatmap.HitObjects[beatmap.HitObjects.Count - 1].EndTime;
+        beatmapDuration = beatmap.HitObjects[beatmap.HitObjects.Count - 1].EndTime;
         approachRate = beatmap.DifficultySection.ApproachRate;
         approachMs = CalculateApproachMs();
 
@@ -101,6 +111,10 @@ public class BeatmapGame : MonoBehaviour {
         latestSpawnedBeat = 0;
         closestBeat = 0;
         score = 0;
+        combo = 0;
+        GameManager.UpdateComboText(combo.ToString());
+        GameManager.UpdateScoreText(score.ToString());
+
         musicSource.Stop();
 
         for(int i = 0; i < beats.Count; i++){
@@ -186,11 +200,18 @@ public class BeatmapGame : MonoBehaviour {
 
         // songTimer += (int) (1);
         songTimer = (int)(musicSource.time * 1000);
-        GameManager.UpdateSongProgressSlider((float) songTimer/songDuration);
+        GameManager.UpdateSongProgressSlider((float) songTimer/beatmapDuration);
 
-        if (songTimer >= songDuration){
+        if (songTimer >= beatmapDuration + beatmapFade){
             OnSongEnd();
             return;
+        }
+
+        // We allow player to skip ahead.
+        if (songTimer + beatmapFade < hitObjects[0].StartTime){
+            if (Input.GetButtonDown("Skip Ahead")){
+                musicSource.time = (hitObjects[0].StartTime - beatmapFade) / 1000;
+            }
         }
 
         // Spawn beats.
@@ -221,16 +242,16 @@ public class BeatmapGame : MonoBehaviour {
 
             // Perfect time formula: beat.hitObject.StartTime + beat.delay <= songTimer
             if (beat.offset <= songTimer){
-                HitDrum(ColorToDrum(beat.color));
+                // HitDrum(ColorToDrum(beat.color));
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.X)){
-            HitDrum(Drum.Right);
+        if (Input.GetButtonDown(ButtonsMapping.LeftDrum)){
+            HitDrum(Drum.Left);
         }
 
-        if (Input.GetKeyDown(KeyCode.Z)){
-            HitDrum(Drum.Left);
+        if (Input.GetButtonDown(ButtonsMapping.RightDrum)){
+            HitDrum(Drum.Right);
         }
     }
 
@@ -258,8 +279,18 @@ public class BeatmapGame : MonoBehaviour {
         beat.gameObject.SetActive(false);
         closestBeat += 1;
 
-        score += (int) CalculateScore(beat, drum);
+        int gain = (int) CalculateScore(beat, drum);
+
+        if (gain > 0){
+            combo += 1;
+        } else {
+            combo = 0;
+        }
+
+        score += gain * combo;
+
         GameManager.UpdateScoreText(score.ToString());
+        GameManager.UpdateComboText(combo.ToString());
     }
 
     // https://osu.ppy.sh/help/wiki/Beatmap_Editor/Song_Setup#approach-rate

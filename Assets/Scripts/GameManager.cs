@@ -27,6 +27,7 @@ public class GameManager : MonoBehaviour {
     private static Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>> beatmapsDictionary = new Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>>();
 
     public Text scoreText;
+    public Text comboText;
     public Slider songProgressSlider;
 
     private void SetQuality(){
@@ -101,10 +102,12 @@ public class GameManager : MonoBehaviour {
             }
 
             // StartBeatmap("411894 Remo Prototype[CV_ Hanamori Yumiri] - Sendan Life.osz", 2);
-            // StartBeatmap("554568 CHiCO with HoneyWorks - Pride Kakumei.osz", 2);
-            StartBeatmap("46862 UVERworld - CORE PRIDE (TV Size).osz", 3);
+            StartBeatmap("554568 CHiCO with HoneyWorks - Pride Kakumei.osz", 0);
+            // StartBeatmap("46862 UVERworld - CORE PRIDE (TV Size).osz", 3);
             // StartBeatmap("978759 L. V. Beethoven - Moonlight Sonata (Cranky Remix).osz", 1);
             // StartBeatmap("27509 Hanazawa Kana - Renai Circulation (Short Ver.).osz", 5);
+            // StartBeatmap("16893 Banya - Beethoven Virus (Full ver.).osz", 5);
+            // StartBeatmap("203734 JerryC - Canon Rock.osz", 5);
         } else {
             Destroy(gameObject);
         }
@@ -198,7 +201,8 @@ public class GameManager : MonoBehaviour {
         OsuParsers.Beatmaps.Beatmap beatmap = beatmapsDictionary[oszName][osuId];
         
         if ((gameState & GameState.Started) == GameState.Started){
-            gameState = gameState & ~GameState.Started;
+            // Reset gamestate.
+            gameState = 0;
         }
 
         currentBeatmapOszName = oszName;
@@ -214,6 +218,10 @@ public class GameManager : MonoBehaviour {
 
     public static void UpdateScoreText(string score){
         instance.scoreText.text = "Score: " + score.PadLeft(9, '0');
+    }
+
+    public static void UpdateComboText(string combo){
+        instance.comboText.text = "Combo: " + combo;
     }
 
     public static void UpdateSongProgressSliderColor(Color color){
@@ -246,8 +254,10 @@ public class GameManager : MonoBehaviour {
 
         if ((gameState & GameState.Paused) == GameState.Paused){
             print("Paused");
+            BeatmapGame.instance.musicSource.Pause();
         } else {
             print("Resumed");
+            BeatmapGame.instance.musicSource.UnPause();
         }
     }
 }
