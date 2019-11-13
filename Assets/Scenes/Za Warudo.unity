@@ -208,7 +208,7 @@ Transform:
   m_GameObject: {fileID: 413147749}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: -2.5, z: 24.800001}
-  m_LocalScale: {x: 5, y: 5, z: 5}
+  m_LocalScale: {x: 50, y: 5, z: 50}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 2
@@ -473,13 +473,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2031660467}
-  m_LocalRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
-  m_LocalPosition: {x: 0, y: 10, z: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 30, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2031660471
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -496,6 +496,8 @@ MonoBehaviour:
   material: {fileID: 2100000, guid: e41b3ec1450cc2446aab1f24e4f0b829, type: 2}
   isZAWARUDO: 0
   _DistanceToCamera: 0
-  _Speed: 20
-  stopAtDistance: 60
-  _ZaWarudoColor: {r: 0.13461542, g: 0, b: 1, a: 1}
+  _Speed: 100
+  stopAtDistance: 100
+  _WaveColor: {r: 0, g: 0, b: 1, a: 1}
+  _ImplodeTimeToReachMax: 0.3
+  _ImplodeColor: {r: 1, g: 0.009047461, b: 0, a: 1}

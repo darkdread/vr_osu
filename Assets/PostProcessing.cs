@@ -10,39 +10,34 @@ public class PostProcessing : MonoBehaviour
 
     public bool isZAWARUDO = false;
 
+    [Header("Wave Effect")]
     public float _DistanceToCamera = 0f;
-    public float _Speed = 5f;
-    public float stopAtDistance = 10f;
+    public float _Speed = 100f;
+    public float stopAtDistance = 100f;
+    public Color _WaveColor = Color.blue;
 
-    public Color _ZaWarudoColor = Color.blue;
-
-    private float PingPong(float value, float length){
-        if (value > length){
-            return length - value % length;
-        }
-
-        return value;
-    }
+    [Header("Implode Effect")]
+    public float _ImplodeTimeToReachMax = 0.3f;
+    public Color _ImplodeColor = Color.blue;
 
     private void OnRenderImage(RenderTexture src, RenderTexture dest){
         if (!isZAWARUDO){
             Graphics.Blit(src, dest, material);
             return;
         }
-        float circle = Mathf.PingPong(_DistanceToCamera, stopAtDistance);
-        material.SetColor("_ZaWarudoColor", _ZaWarudoColor);
+        
+        material.SetColor("_WaveColor", _WaveColor);
         material.SetFloat("_DistanceFromCamera", _DistanceToCamera);
-        material.SetFloat("_PingPong", circle);
+
+        material.SetColor("_ImplodeColor", _ImplodeColor);
+        material.SetFloat("_ImplodeTimeToReachMax", _ImplodeTimeToReachMax);
+        
         Graphics.Blit(src, dest, material);
     }
 
     private void Awake(){
         cam = GetComponent<Camera>();
         cam.depthTextureMode = cam.depthTextureMode | DepthTextureMode.Depth;
-        // print(PingPong(0f, 0.5f));
-        // print(PingPong(0.5f, 0.5f));
-        // print(PingPong(1f, 0.5f));
-        // print(PingPong(0.8f, 0.5f));
     }
 
     private void Update(){
@@ -64,6 +59,9 @@ public class PostProcessing : MonoBehaviour
     private void ZAWARUDO(){
         isZAWARUDO = true;
 
+        material.SetFloat("_StartTime", Time.timeSinceLevelLoad);
+
+        print(Time.timeSinceLevelLoad);
         _DistanceToCamera = 0f;
     }
 

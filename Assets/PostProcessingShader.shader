@@ -8,7 +8,11 @@
         [Header(Wave)]
         _DistanceFromCamera ("Distance from player", float) = 10
         _WaveTrail ("Length of the trail", Range(0,5)) = 1
-        _ZaWarudoColor ("Color", Color) = (1,0,0,1)
+        _WaveColor ("Wave Color", Color) = (1,0,0,1)
+
+        [Header(Implode)]
+        _ImplodeTimeToReachMax ("Implode time to reach entire screen", float) = 1
+        _ImplodeColor ("Implode Color", Color) = (1,0,0,1)
     }
     SubShader
     {
@@ -58,47 +62,75 @@
 
                 o.scrPos = ComputeScreenPos(o.vertex);
                 o.interpolatedRay = v.ray;
+                
                 return o;
             }
 
             static const float pi = 3.141592653589793238462;
 
             sampler2D _MainTex;
+            float _StartTime;
+
             float _DistanceFromCamera;
-            float4 _ZaWarudoColor;
-            float _PingPong;
-            
             float _WaveTrail;
+            float4 _WaveColor;
+
+            float _ImplodeTimeToReachMax;
+            float4 _ImplodeColor;
+
+            float BezierCurve(float4 p0, float4 p1, float4 p2, float t){
+                float pA = lerp(p0, p1, t);
+                float pB = lerp(p1, p2, t);
+                return lerp(pA, pB, t);
+            }
 
             fixed4 frag (v2f i) : SV_Target
             {
                 // float randomness = tex2D(_NoiseTex, float2(sin(_Time[1]), sin(_Time[1]))).r;
                 // i.uv = float2(i.uv.x * randomness, i.uv.y * randomness);
 
-                float mySin = sin(_Time[1]);
+                float timeSinceEffect = _Time.y - _StartTime;
                 fixed4 col = tex2D(_MainTex, i.uv);
-                
-                float offset = PingPong(i.uv.x, 0.5);
-                offset = sin(i.uv.x);
-                
-                float depth = tex2D(_CameraDepthTexture, i.scrPos.xy / i.scrPos.w).r;
+                float2 centerOfScreen = _ScreenParams.xy / 2;
+                float2 pixelOfScreen = float2(i.scrPos.x * _ScreenParams.x, i.scrPos.y * _ScreenParams.y);
+                float distanceBetweenCenter = distance(pixelOfScreen, centerOfScreen);
+
+                // 0 to 1.
+                float distanceBetweenCenterNormalized = distance(i.uv.xy, float2(0.5, 0.5)) * 2;
 
                 // if (_DistanceFromCamera <= 0){
                 //     return col;
                 // }
 
-                if (depth >= _ProjectionParams.z){
-                    return col;
+                // Zoom effect.
+                float2 zoom = i.uv;
+
+                zoom = i.uv - (centerOfScreen / _ScreenParams.xy) / 1.5;
+                zoom = (centerOfScreen / _ScreenParams.xy) + zoom;
+
+                col = tex2D(_MainTex, zoom);
+                float depth = tex2D(_CameraDepthTexture, zoom).r;
+
+                if (distanceBetweenCenterNormalized > 1){
+                    // return col - 0.1;
                 }
 
-                // Middle + 10%.
-                // _DistanceFromCamera += offset * _DistanceFromCamera;
+                // return col;
+
+                // Wave effect.
+                float offset = BezierCurve(0, 1, 0, i.uv.x);
+
+                // x(0.5) = _DistanceFromCamera * 2.
+                _DistanceFromCamera += offset * _DistanceFromCamera;
 
                 // Linear depth between camera and far clipping plane.
                 float linearDepth = Linear01Depth(depth);
-                float linearEyeDepth = LinearEyeDepth(depth);
 
                 depth = linearDepth;
+
+                if (depth >= _ProjectionParams.z){
+                    return col;
+                }
 
                 // Depth as distance from camera in units.
                 depth = depth * _ProjectionParams.z;
@@ -108,9 +140,21 @@
 
                 // 1 if depth > _DistanceFromCamera, 0 if depth < _DistanceFromCamera - _WaveTrail, otherwise between 0 and 1 of min, max.
                 float waveTrail = smoothstep(_DistanceFromCamera - _WaveTrail, _DistanceFromCamera, depth);
-                float wave = waveFront * waveTrail;
+
+                // 1 - waveFront so the colors start from front > back.
+                float wave = 1 - waveFront;
                 
-                col = lerp(col, _ZaWarudoColor, wave);
+                col = lerp(col, _WaveColor, wave);
+
+
+                // Implode effect.
+
+                // If effect is outside of radius.
+                if (distanceBetweenCenter > (timeSinceEffect / _ImplodeTimeToReachMax) * _ScreenParams.x/2){
+                    return col;
+                }
+
+                col = col * _ImplodeColor * (1 - smoothstep(0, _ScreenParams.x, distanceBetweenCenter));
 
                 return col;
             }
