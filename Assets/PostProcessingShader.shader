@@ -104,18 +104,38 @@
 
                 // Zoom effect.
                 float2 zoom = i.uv;
+                float zoomPercentage = 1 + timeSinceEffect * (1 - distanceBetweenCenterNormalized) * 5;
+                float zoomer = 1 - (1/zoomPercentage);
 
-                zoom = i.uv - (centerOfScreen / _ScreenParams.xy) / 1.5;
-                zoom = (centerOfScreen / _ScreenParams.xy) + zoom;
+                // x -0.5 to 0.5, y -0.5 to 0.5.
+                // Signs turn negative if < half.
+                zoom += float2((0.5 - i.uv.x) * zoomer, 0);
+                zoom += float2(0, (0.5 - i.uv.y) * zoomer);
+
+                // if (i.uv.x > 0.5){
+                //     // zoom += float2(-i.uv.x * (1 - i.uv.x), 0);
+                //     zoom += float2((0.5 - i.uv.x)/2, 0);
+                // } else {
+                //     // zoom += float2(i.uv.x * (1 - i.uv.x), 0);
+                //     zoom += float2((0.5 - i.uv.x)/2, 0);
+                // }
+
+                // if (i.uv.y > 0.5){
+                //     // zoom += float2(0, -i.uv.y * (1 - i.uv.y));
+                //     zoom += float2(0, (0.5 - i.uv.y)/2);
+                // } else {
+                //     // zoom += float2(0, i.uv.y * (1 - i.uv.y));
+                //     zoom += float2(0, (0.5 - i.uv.y)/2);
+                // }
 
                 col = tex2D(_MainTex, zoom);
                 float depth = tex2D(_CameraDepthTexture, zoom).r;
 
                 if (distanceBetweenCenterNormalized > 1){
-                    // return col - 0.1;
+                    return col - 0.1;
                 }
 
-                // return col;
+                return col;
 
                 // Wave effect.
                 float offset = BezierCurve(0, 1, 0, i.uv.x);
