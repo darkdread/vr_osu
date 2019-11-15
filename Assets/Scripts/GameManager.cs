@@ -30,7 +30,11 @@ public class GameManager : MonoBehaviour {
     public Text comboText;
     public Slider songProgressSlider;
 
-    private void SetQuality(){
+	public Transform songMenu;
+	public SongButton songButtonPrefab;
+	public SongButtonChild songButtonChildPrefab;
+
+	private void SetQuality(){
         QualitySettings.vSyncCount = 0;
         Application.targetFrameRate = 144;
     }
@@ -101,18 +105,46 @@ public class GameManager : MonoBehaviour {
                 }
             }
 
-            // StartBeatmap("411894 Remo Prototype[CV_ Hanamori Yumiri] - Sendan Life.osz", 2);
-            // StartBeatmap("554568 CHiCO with HoneyWorks - Pride Kakumei.osz", 2);
-            // StartBeatmap("46862 UVERworld - CORE PRIDE (TV Size).osz", 3);
-            // StartBeatmap("978759 L. V. Beethoven - Moonlight Sonata (Cranky Remix).osz", 1);
-            // StartBeatmap("27509 Hanazawa Kana - Renai Circulation (Short Ver.).osz", 5);
-            // StartBeatmap("16893 Banya - Beethoven Virus (Full ver.).osz", 5);
-            // StartBeatmap("203734 JerryC - Canon Rock.osz", 5);
-            StartBeatmap("30768 Joe Inoue - CLOSER (TV Size).osz", 5);
-        } else {
+			// StartBeatmap("411894 Remo Prototype[CV_ Hanamori Yumiri] - Sendan Life.osz", 2);
+			// StartBeatmap("554568 CHiCO with HoneyWorks - Pride Kakumei.osz", 2);
+			// StartBeatmap("46862 UVERworld - CORE PRIDE (TV Size).osz", 3);
+			// StartBeatmap("978759 L. V. Beethoven - Moonlight Sonata (Cranky Remix).osz", 1);
+			// StartBeatmap("27509 Hanazawa Kana - Renai Circulation (Short Ver.).osz", 5);
+			// StartBeatmap("16893 Banya - Beethoven Virus (Full ver.).osz", 5);
+			// StartBeatmap("203734 JerryC - Canon Rock.osz", 5);
+			// StartBeatmap("30768 Joe Inoue - CLOSER (TV Size).osz", 5);
+			// StartBeatmap("109852 Foster The People - Pumped Up Kicks.osz", 1);
+
+			LoadAllBeatmapsIntoMenu();
+
+		} else {
             Destroy(gameObject);
         }
     }
+
+	public static void LoadAllBeatmapsIntoMenu() {
+
+		foreach(KeyValuePair<string, List<OsuParsers.Beatmaps.Beatmap>> kvp in beatmapsDictionary) {
+			string songName = kvp.Key;
+
+			// Create main song button containing all difficulties.
+			SongButton songButton = Instantiate(instance.songButtonPrefab, instance.songMenu);
+			songButton.UpdateSongButton(songName);
+
+			foreach (OsuParsers.Beatmaps.Beatmap beatmap in kvp.Value) {
+				string beatmapVersion = beatmap.MetadataSection.Version;
+				float difficulty = beatmap.DifficultySection.ApproachRate;
+
+				SongButtonChild songButtonChild = Instantiate(instance.songButtonChildPrefab, songButton.transform);
+
+				// By default, the child is inactive.
+				songButtonChild.gameObject.SetActive(false);
+				songButtonChild.UpdateButton(beatmapVersion, difficulty.ToString());
+				songButton.AddSongButtonChild(songButtonChild);
+			}
+		}
+
+	}
 
     public static List<OsuParsers.Beatmaps.Beatmap> LoadBeatmapsFromFolder(string path){
         List<OsuParsers.Beatmaps.Beatmap> beatmaps = new List<OsuParsers.Beatmaps.Beatmap>();
