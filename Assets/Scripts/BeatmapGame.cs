@@ -5,11 +5,22 @@ using UnityEngine;
 static class ButtonsMapping {
     public static string LeftDrum = "Left Drum";
     public static string RightDrum = "Right Drum";
+    public static string LeftSideDrum = "Left Side Drum";
+    public static string RightSideDrum = "Right Side Drum";
+}
+
+public enum TaikoColorExtended {
+    Red = 0,
+    Blue = 1,
+    Green = 2,
+    White = 3
 }
 
 public enum Drum {
-    Left,
-    Right
+    Right = 0,
+    Left = 1,
+    LeftSide = 2,
+    RightSide = 3
 }
 
 public enum Score {
@@ -61,12 +72,8 @@ public class BeatmapGame : MonoBehaviour {
     public AudioSource musicSource;
     public AudioSource sfxSource;
 
-    private Drum ColorToDrum(OsuParsers.Enums.Beatmaps.TaikoColor color){
-        if (color == OsuParsers.Enums.Beatmaps.TaikoColor.Blue){
-            return Drum.Left;
-        }
-
-        return Drum.Right;
+    private Drum ColorToDrum(TaikoColorExtended color){
+        return (Drum) color;
     }
 
     private DrumTransformPair GetDrumTransformPair(Drum drum){
@@ -82,7 +89,7 @@ public class BeatmapGame : MonoBehaviour {
     void Awake(){
         if (instance == null){
             instance = this;
-            // beatMarkers.Add(Drum.Left, );
+            
             musicSource = GetComponents<AudioSource>()[0];
             sfxSource = GetComponents<AudioSource>()[1];
         } else {
@@ -122,8 +129,6 @@ public class BeatmapGame : MonoBehaviour {
         }
 
         beats.Clear();
-
-        // songTimer = 10000;
 
         // Spawn beats.
         for(int i = 0; i < hitObjects.Count; i++){
@@ -242,7 +247,7 @@ public class BeatmapGame : MonoBehaviour {
 
             // Perfect time formula: beat.hitObject.StartTime + beat.delay <= songTimer
             if (beat.offset <= songTimer){
-                // HitDrum(ColorToDrum(beat.color));
+                HitDrum(ColorToDrum(beat.color));
             }
         }
 
@@ -346,6 +351,30 @@ public class BeatmapGame : MonoBehaviour {
         }
     }
 
+    private TaikoColorExtended ColorRandomize(OsuParsers.Enums.Beatmaps.TaikoColor taikoColor){
+        // Takes in blue || red.
+        int r = Random.Range(0, 100);
+
+        // 30% chance to get to sides.
+        if (r < 30){
+            if (taikoColor == OsuParsers.Enums.Beatmaps.TaikoColor.Red){
+                return TaikoColorExtended.White;
+            } else {
+                return TaikoColorExtended.Green;
+            }
+        }
+
+        return (TaikoColorExtended) taikoColor;
+    }
+
+    private Beat GetPreviousBeat(){
+        if (beats.Count <= 0){
+            return null;
+        }
+
+        return beats[latestSpawnedBeat - 1];
+    }
+
     private void SpawnBeat(OsuParsers.Beatmaps.Objects.HitObject hitObject, int delay = 0){
         Beat beat = Instantiate(beatPrefab, beatHolder);
         beat.hitObject = hitObject;
@@ -354,40 +383,61 @@ public class BeatmapGame : MonoBehaviour {
 
         beat.name = beat.name + latestSpawnedBeat;
 
+        Beat prevBeat = GetPreviousBeat();
+
         if (hitObject is OsuParsers.Beatmaps.Objects.Slider){
             beat.GetComponent<MeshRenderer>().material.color = Color.black;
         }
 
+        OsuParsers.Enums.Beatmaps.TaikoColor originalColor = OsuParsers.Enums.Beatmaps.TaikoColor.Blue;
+
         if (hitObject is OsuParsers.Beatmaps.Objects.Taiko.TaikoHit){
             OsuParsers.Beatmaps.Objects.Taiko.TaikoHit taikoHit = (OsuParsers.Beatmaps.Objects.Taiko.TaikoHit) hitObject;
-            beat.color = taikoHit.Color;
+            originalColor = taikoHit.Color;
         } else {
-            if (beats.Count > 0){
-                // Color randomizer logic here.
-                Beat prevBeat = beats[latestSpawnedBeat - 1];
+            // Color randomizer logic here.
 
-                // If previous beat is within 50ms, force swap.
-                if (beat.offset - 50 <= prevBeat.offset){
-                    beat.color = prevBeat.color == OsuParsers.Enums.Beatmaps.TaikoColor.Blue ? OsuParsers.Enums.Beatmaps.TaikoColor.Red : OsuParsers.Enums.Beatmaps.TaikoColor.Blue;
-                } else {
-                    int r = Random.Range(0, 2);
-                    if (r == 0){
-                        beat.color = OsuParsers.Enums.Beatmaps.TaikoColor.Blue;
-                    } else {
-                        beat.color = OsuParsers.Enums.Beatmaps.TaikoColor.Red;
-                    }
+            int r = Random.Range(0, 2);
+            if (r == 0){
+                originalColor = OsuParsers.Enums.Beatmaps.TaikoColor.Blue;
+            } else {
+                originalColor = OsuParsers.Enums.Beatmaps.TaikoColor.Red;
+            }
+        }
+
+        beat.color = ColorRandomize(originalColor);
+
+        if (prevBeat){
+
+            // If previous beat is within 50ms, force swap.
+            if (beat.offset - 50 <= prevBeat.offset){
+
+                // Bad algorithm... but randomize color every loop until it's not the same.
+                while (beat.color == prevBeat.color){
+                    beat.color = ColorRandomize(originalColor);
                 }
             }
         }
 
-        if (beat.color == OsuParsers.Enums.Beatmaps.TaikoColor.Blue){
-            beat.GetComponent<MeshRenderer>().material.color = Color.blue;
-            beat.transform.Find("Line").GetComponent<MeshRenderer>().material.color = Color.blue;
-            beat.transform.Find("Line").GetComponent<MeshRenderer>().material.SetColor("_EmissionColor", Color.blue * 0.5f);
-        } else {
-            beat.GetComponent<MeshRenderer>().material.color = Color.red;
-            beat.transform.Find("Line").GetComponent<MeshRenderer>().material.color = Color.red;
-            beat.transform.Find("Line").GetComponent<MeshRenderer>().material.SetColor("_EmissionColor", Color.red * 0.5f);
+        MeshRenderer meshRenderer = beat.GetComponent<MeshRenderer>();
+        MeshRenderer lineMeshRenderer = beat.transform.Find("Line").GetComponent<MeshRenderer>();
+
+        if (beat.color == TaikoColorExtended.Blue){
+            meshRenderer.material.color = Color.blue;
+            lineMeshRenderer.material.color = Color.blue;
+            lineMeshRenderer.material.SetColor("_EmissionColor", Color.blue * 0.5f);
+        } else if (beat.color == TaikoColorExtended.Red) {
+            meshRenderer.material.color = Color.red;
+            lineMeshRenderer.material.color = Color.red;
+            lineMeshRenderer.material.SetColor("_EmissionColor", Color.red * 0.5f);
+        } else if (beat.color == TaikoColorExtended.White) {
+            meshRenderer.material.color = Color.white;
+            lineMeshRenderer.material.color = Color.white;
+            lineMeshRenderer.material.SetColor("_EmissionColor", Color.white * 0.5f);
+        } else if (beat.color == TaikoColorExtended.Green) {
+            meshRenderer.material.color = Color.green;
+            lineMeshRenderer.material.color = Color.green;
+            lineMeshRenderer.material.SetColor("_EmissionColor", Color.green * 0.5f);
         }
 
         // beat.transform.position = GetDrumTransformPair(ColorToDrum(beat.color)).transform.position + Vector3.forward * ((float)(hitObject.StartTime + delay - songTimer)/(1000f / beatSpeed));

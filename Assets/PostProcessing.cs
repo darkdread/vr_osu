@@ -22,7 +22,7 @@ public class PostProcessing : MonoBehaviour
 
     private void OnRenderImage(RenderTexture src, RenderTexture dest){
         if (!isZAWARUDO){
-            Graphics.Blit(src, dest, material);
+            Graphics.Blit(src, dest);
             return;
         }
         
