@@ -30,9 +30,11 @@ public class GameManager : MonoBehaviour {
     public Text comboText;
     public Slider songProgressSlider;
 
-	public Transform songMenu;
-	public SongButton songButtonPrefab;
-	public SongButtonChild songButtonChildPrefab;
+    public Transform songMenu;
+	public Transform songMenuContent;
+	public SongButtonHeader songButtonPrefab;
+    public GameObject songButtonContainerPrefab;
+	public SongButtonBeatmap songButtonChildPrefab;
 
 	private void SetQuality(){
         QualitySettings.vSyncCount = 0;
@@ -122,25 +124,53 @@ public class GameManager : MonoBehaviour {
         }
     }
 
+    public static void ShowSongMenu(){
+        instance.songMenu.gameObject.SetActive(true);
+    }
+
+    public static void HideSongMenu(){
+        SongButtonHeader.HideAllList();
+        instance.songMenu.gameObject.SetActive(false);
+    }
+
 	public static void LoadAllBeatmapsIntoMenu() {
 
 		foreach(KeyValuePair<string, List<OsuParsers.Beatmaps.Beatmap>> kvp in beatmapsDictionary) {
 			string songName = kvp.Key;
 
+            Transform container = Instantiate(instance.songButtonContainerPrefab, instance.songMenuContent).transform;
+
 			// Create main song button containing all difficulties.
-			SongButton songButton = Instantiate(instance.songButtonPrefab, instance.songMenu);
+			SongButtonHeader songButton = Instantiate(instance.songButtonPrefab, container);
 			songButton.UpdateSongButton(songName);
+
+            int songId = 0;
+
+            // Sort difficulty.
+            // Difficulty isn't by approach rate =(
+            // https://github.com/ppy/osu-difficulty-calculator
+            kvp.Value.Sort((x, y) => x.DifficultySection.ApproachRate.CompareTo(y.DifficultySection.ApproachRate));
 
 			foreach (OsuParsers.Beatmaps.Beatmap beatmap in kvp.Value) {
 				string beatmapVersion = beatmap.MetadataSection.Version;
+                string beatmapMode = beatmap.GeneralSection.Mode.ToString();
 				float difficulty = beatmap.DifficultySection.ApproachRate;
 
-				SongButtonChild songButtonChild = Instantiate(instance.songButtonChildPrefab, songButton.transform);
+                if (beatmap.GeneralSection.Mode == OsuParsers.Enums.Ruleset.Mania){
+                    print(string.Format("Osz: {0}, version: {1}, mode: {2}", songName, beatmapVersion, beatmap.GeneralSection.Mode));
+                    continue;
+                }
+
+				SongButtonBeatmap songButtonChild = Instantiate(instance.songButtonChildPrefab, container);
 
 				// By default, the child is inactive.
 				songButtonChild.gameObject.SetActive(false);
-				songButtonChild.UpdateButton(beatmapVersion, difficulty.ToString());
+
+                songButtonChild.SetBeatmapData(songName, songId);
+				songButtonChild.UpdateButton(beatmapVersion, difficulty.ToString(), beatmapMode);
 				songButton.AddSongButtonChild(songButtonChild);
+
+                songId += 1;
 			}
 		}
 
@@ -238,6 +268,7 @@ public class GameManager : MonoBehaviour {
             gameState = 0;
         }
 
+        HideSongMenu();
         currentBeatmapOszName = oszName;
         currentBeatmapOsuId = osuId;
         BeatmapGame.instance.StartBeatmap(beatmap);
@@ -246,7 +277,9 @@ public class GameManager : MonoBehaviour {
     public static void Stop(){
         gameState = gameState & ~GameState.Started;
 
-        instance.StartBeatmap(currentBeatmapOszName, currentBeatmapOsuId);
+        ShowSongMenu();
+
+        // instance.StartBeatmap(currentBeatmapOszName, currentBeatmapOsuId);
     }
 
     public static void UpdateScoreText(string score){
@@ -279,6 +312,12 @@ public class GameManager : MonoBehaviour {
     }
 
     public void Pause(bool toPause){
+        // Game hasn't started, can't pause.
+        if ((gameState & GameState.Started) != GameState.Started ){
+            print("Can't pause an unstarted game");
+            return;
+        }
+
         if (toPause){
             gameState = gameState | GameState.Paused;
         } else {
@@ -287,9 +326,11 @@ public class GameManager : MonoBehaviour {
 
         if ((gameState & GameState.Paused) == GameState.Paused){
             print("Paused");
+            ShowSongMenu();
             BeatmapGame.instance.musicSource.Pause();
         } else {
             print("Resumed");
+            HideSongMenu();
             BeatmapGame.instance.musicSource.UnPause();
         }
     }
