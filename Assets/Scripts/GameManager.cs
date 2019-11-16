@@ -36,9 +36,15 @@ public class GameManager : MonoBehaviour {
     public GameObject songButtonContainerPrefab;
 	public SongButtonBeatmap songButtonChildPrefab;
 
+    public Material skyboxMaterial;
+    public float skyboxRotation = 0;
+    public float skyboxRotationSpeed = 1;
+
 	private void SetQuality(){
         QualitySettings.vSyncCount = 0;
         Application.targetFrameRate = 144;
+
+        RenderSettings.skybox = skyboxMaterial;
     }
     
     void Awake(){
@@ -158,6 +164,7 @@ public class GameManager : MonoBehaviour {
 
                 if (beatmap.GeneralSection.Mode == OsuParsers.Enums.Ruleset.Mania){
                     print(string.Format("Osz: {0}, version: {1}, mode: {2}", songName, beatmapVersion, beatmap.GeneralSection.Mode));
+                    songId += 1;
                     continue;
                 }
 
@@ -309,6 +316,10 @@ public class GameManager : MonoBehaviour {
                 StartBeatmap(currentBeatmapOszName, currentBeatmapOsuId);
             }
         }
+
+        // Rotate skybox.
+        skyboxRotation += Time.deltaTime * skyboxRotationSpeed;
+        skyboxMaterial.SetFloat("_Rotation", skyboxRotation);
     }
 
     public void Pause(bool toPause){
