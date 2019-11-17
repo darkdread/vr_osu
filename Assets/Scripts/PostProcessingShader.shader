@@ -104,7 +104,7 @@
 
                 // Zoom effect.
                 float2 zoom = i.uv;
-                float zoomPercentage = 1 + timeSinceEffect * (1 - distanceBetweenCenterNormalized) * 5;
+                float zoomPercentage = 1 + timeSinceEffect * (1 - distanceBetweenCenterNormalized) * 1;
                 float zoomer = 1 - (1/zoomPercentage);
 
                 // x -0.5 to 0.5, y -0.5 to 0.5.
@@ -135,7 +135,7 @@
                     return col - 0.1;
                 }
 
-                return col;
+                // return col;
 
                 // Wave effect.
                 float offset = BezierCurve(0, 1, 0, i.uv.x);

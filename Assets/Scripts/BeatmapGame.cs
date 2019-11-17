@@ -32,7 +32,8 @@ public enum Score {
 [System.Serializable]
 public class DrumTransformPair {
     public Drum drum;
-    public Transform transform;
+    public Transform drumTransform;
+    public Transform drumMarkerTransform;
 }
 
 [RequireComponent(typeof(AudioSource))]
@@ -45,6 +46,7 @@ public class BeatmapGame : MonoBehaviour {
     public List<Beat> beats = new List<Beat>();
 
     public List<DrumTransformPair> drumTransformPairs = new List<DrumTransformPair>();
+    public Light gameLight;
     public Beat beatPrefab;
     public Transform beatHolder;
     public AudioClip drumSfx;
@@ -76,7 +78,7 @@ public class BeatmapGame : MonoBehaviour {
         return (Drum) color;
     }
 
-    private DrumTransformPair GetDrumTransformPair(Drum drum){
+    private DrumTransformPair GetDrumMarkerTransformPair(Drum drum){
         for(int i = 0; i < drumTransformPairs.Count; i++){
             if (drumTransformPairs[i].drum == drum){
                 return drumTransformPairs[i];
@@ -238,7 +240,7 @@ public class BeatmapGame : MonoBehaviour {
             }
 
             // beatTransform.position += -Vector3.forward * (Time.deltaTime * musicSource.pitch) * beatSpeed;
-            beatTransform.position = GetDrumTransformPair(ColorToDrum(beat.color)).transform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
+            beatTransform.position = GetDrumMarkerTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
 
             // Miss.
             if (beat.offset + beatHitOkayMs < songTimer){
@@ -257,6 +259,14 @@ public class BeatmapGame : MonoBehaviour {
 
         if (Input.GetButtonDown(ButtonsMapping.RightDrum)){
             HitDrum(Drum.Right);
+        }
+
+        if (Input.GetButtonDown(ButtonsMapping.LeftSideDrum)){
+            HitDrum(Drum.LeftSide);
+        }
+
+        if (Input.GetButtonDown(ButtonsMapping.RightSideDrum)){
+            HitDrum(Drum.RightSide);
         }
     }
 
@@ -309,6 +319,16 @@ public class BeatmapGame : MonoBehaviour {
         }
     }
 
+    private IEnumerator SetMaterialEmissionColor(Material material, Color color){
+        material.EnableKeyword("_EMISSION");
+        material.SetColor("_EmissionColor", color);
+        // gameLight.enabled = false;
+        yield return new WaitForSeconds(0.1f);
+
+        material.DisableKeyword("_EMISSION");
+        // gameLight.enabled = true;
+    }
+
     public void HitDrum(Drum drum){
         // Get closest beat within song timer.
         Beat beat = GetClosestBeat();
@@ -324,6 +344,8 @@ public class BeatmapGame : MonoBehaviour {
                 print("Don't register drum hits.");
                 return;
             }
+
+            StartCoroutine(SetMaterialEmissionColor(GetDrumMarkerTransformPair(drum).drumTransform.GetComponent<MeshRenderer>().material, Color.white));
 
             sfxSource.PlayOneShot(drumSfx);
             ScoreBeat(beat, drum);
@@ -440,8 +462,8 @@ public class BeatmapGame : MonoBehaviour {
             lineMeshRenderer.material.SetColor("_EmissionColor", Color.green * 0.5f);
         }
 
-        // beat.transform.position = GetDrumTransformPair(ColorToDrum(beat.color)).transform.position + Vector3.forward * ((float)(hitObject.StartTime + delay - songTimer)/(1000f / beatSpeed));
-        beat.transform.position = GetDrumTransformPair(ColorToDrum(beat.color)).transform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
+        // beat.transform.position = GetDrumTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float)(hitObject.StartTime + delay - songTimer)/(1000f / beatSpeed));
+        beat.transform.position = GetDrumMarkerTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
 
         beats.Add(beat);
         latestSpawnedBeat += 1;

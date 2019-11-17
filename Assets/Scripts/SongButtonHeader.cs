@@ -58,8 +58,8 @@ public class SongButtonHeader : MonoBehaviour
 		// Wait one frame for game to update containerRt's new position.
 		yield return new WaitForEndOfFrame();
 
-		contentRt.anchoredPosition = new Vector2(contentRt.anchoredPosition.x, -containerRt.anchoredPosition.y - scrollView.GetComponent<RectTransform>().rect.height/2 - songButtonBeatmapHeight/2);
-		print(-containerRt.anchoredPosition.y - scrollView.GetComponent<RectTransform>().rect.height/2 - songButtonBeatmapHeight/2);
+		contentRt.anchoredPosition = new Vector2(contentRt.anchoredPosition.x, -containerRt.anchoredPosition.y - scrollView.GetComponent<RectTransform>().rect.height/3 - songButtonBeatmapHeight/2);
+		// print(-containerRt.anchoredPosition.y - scrollView.GetComponent<RectTransform>().rect.height/3 - songButtonBeatmapHeight/2);
 
 		if (contentRt.anchoredPosition.y <= 0f){
 			contentRt.anchoredPosition = new Vector2(contentRt.anchoredPosition.x, 0f);
