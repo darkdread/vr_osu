@@ -78,6 +78,9 @@
             float _ImplodeTimeToReachMax;
             float4 _ImplodeColor;
 
+            float _WarpDelay;
+            float _WarpTimeToReachMax;
+
             float BezierCurve(float4 p0, float4 p1, float4 p2, float t){
                 float pA = lerp(p0, p1, t);
                 float pB = lerp(p1, p2, t);
@@ -104,7 +107,24 @@
 
                 // Zoom effect.
                 float2 zoom = i.uv;
-                float zoomPercentage = 1 + timeSinceEffect * (1 - distanceBetweenCenterNormalized) * 1;
+                float zoomPercentage = 1;
+
+                // Start zoom.
+                if (timeSinceEffect >= _WarpDelay){
+                    float warpTime = timeSinceEffect - _WarpDelay;
+
+                    zoomPercentage = 1 + (warpTime/_WarpTimeToReachMax) * (1 - distanceBetweenCenterNormalized) * 20;
+
+                    // Zoom back out.
+                    if (warpTime/_WarpTimeToReachMax > 0.5){
+                        zoomPercentage = 1 + (1 - warpTime/_WarpTimeToReachMax) * (1 - distanceBetweenCenterNormalized) * 20;
+                    }
+
+                    if (warpTime/_WarpTimeToReachMax > 1){
+                        zoomPercentage = 1;
+                    }
+                }
+
                 float zoomer = 1 - (1/zoomPercentage);
 
                 // x -0.5 to 0.5, y -0.5 to 0.5.
@@ -132,12 +152,13 @@
                 float depth = tex2D(_CameraDepthTexture, zoom).r;
 
                 if (distanceBetweenCenterNormalized > 1){
-                    return col - 0.1;
+                    // return col - 0.1;
                 }
 
                 // return col;
 
                 // Wave effect.
+                
                 float offset = BezierCurve(0, 1, 0, i.uv.x);
 
                 // x(0.5) = _DistanceFromCamera * 2.

@@ -10,15 +10,20 @@ public class PostProcessing : MonoBehaviour
 
     public bool isZAWARUDO = false;
 
+    public float _EffectTime = 2f;
+
     [Header("Wave Effect")]
     public float _DistanceToCamera = 0f;
     public float _Speed = 100f;
-    public float stopAtDistance = 100f;
     public Color _WaveColor = Color.blue;
 
     [Header("Implode Effect")]
     public float _ImplodeTimeToReachMax = 0.3f;
-    public Color _ImplodeColor = Color.blue;
+    public Color _ImplodeColor = Color.white;
+
+    [Header("Warp Effect")]
+    public float _WarpDelay = 0.2f;
+    public float _WarpTimeToReachMax = 0.8f;
 
     private void OnRenderImage(RenderTexture src, RenderTexture dest){
         if (!isZAWARUDO){
@@ -31,6 +36,9 @@ public class PostProcessing : MonoBehaviour
 
         material.SetColor("_ImplodeColor", _ImplodeColor);
         material.SetFloat("_ImplodeTimeToReachMax", _ImplodeTimeToReachMax);
+
+        material.SetFloat("_WarpDelay", _WarpDelay);
+        material.SetFloat("_WarpTimeToReachMax", _WarpTimeToReachMax);
         
         Graphics.Blit(src, dest, material);
     }
@@ -44,7 +52,7 @@ public class PostProcessing : MonoBehaviour
         if (isZAWARUDO){
             _DistanceToCamera += Time.deltaTime * _Speed;
 
-            if (_DistanceToCamera > stopAtDistance){
+            if (_DistanceToCamera / _Speed >= _EffectTime){
                 isZAWARUDO = false;
             } else {
                 return;
