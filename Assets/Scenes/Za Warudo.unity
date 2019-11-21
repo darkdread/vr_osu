@@ -304,6 +304,59 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &916586741
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 916586743}
+  - component: {fileID: 916586742}
+  m_Layer: 0
+  m_Name: Pathfinder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &916586742
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 916586741}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56f9a87660081c1499e1784767b4865a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  xGrid: 2
+  yGrid: 2
+  zGrid: 2
+  computeShader: {fileID: 7200000, guid: 5109da3a96045294aa48c0f8231dbc02, type: 3}
+  center: {x: 0, y: 0, z: 0}
+  iterations: 12
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 0
+  debugOutline: 1
+--- !u!4 &916586743
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 916586741}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 4
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1146072478
 GameObject:
   m_ObjectHideFlags: 0
@@ -495,9 +548,11 @@ MonoBehaviour:
   cam: {fileID: 0}
   material: {fileID: 2100000, guid: e41b3ec1450cc2446aab1f24e4f0b829, type: 2}
   isZAWARUDO: 0
+  _EffectTime: 2
   _DistanceToCamera: 0
   _Speed: 100
-  stopAtDistance: 100
   _WaveColor: {r: 0, g: 0, b: 1, a: 1}
   _ImplodeTimeToReachMax: 0.3
-  _ImplodeColor: {r: 1, g: 0.009047461, b: 0, a: 1}
+  _ImplodeColor: {r: 1, g: 1, b: 1, a: 1}
+  _WarpDelay: 0.2
+  _WarpTimeToReachMax: 0.8

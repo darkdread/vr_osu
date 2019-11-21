@@ -1,0 +1,21 @@
+#pragma kernel ayylmao
+#pragma kernel ayylmao2
+
+struct Node {
+    float3 position;
+};
+
+int iterations;
+
+float3 gridSize;
+RWStructuredBuffer<Node> dataBuffer;
+
+[numthreads(1,1,1)]
+void ayylmao (uint3 id : SV_DispatchThreadID){
+    dataBuffer[id.x + id.y * iterations + id.z * iterations * iterations].position = float3(id.x * gridSize.x, id.y * gridSize.y, id.z * gridSize.z);
+}
+
+[numthreads(4,4,4)]
+void ayylmao2 (uint3 id : SV_DispatchThreadID){
+    dataBuffer[id.x + id.y * iterations + id.z * iterations * iterations].position = float3(id.x * gridSize.x, id.y * gridSize.y, id.z * gridSize.z);
+}
