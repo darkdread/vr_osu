@@ -26,16 +26,26 @@ public class GameManager : MonoBehaviour {
 
     private static Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>> beatmapsDictionary = new Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>>();
 
+    [Header("Game UI")]
+    public Transform gameMenu;
     public Text scoreText;
+    public Text accuracyText;
     public Text comboText;
     public Slider songProgressSlider;
 
+    [Header("Song Menu UI")]
     public Transform songMenu;
 	public Transform songMenuContent;
 	public SongButtonHeader songButtonPrefab;
     public GameObject songButtonContainerPrefab;
 	public SongButtonBeatmap songButtonChildPrefab;
 
+    [Header("Song Grade UI")]
+    public Transform gradeMenu;
+    public Text gradeText;
+    public Button gradeBackButton;
+
+    [Header("Skybox")]
     public Material skyboxMaterial;
     public float skyboxRotation = 0;
     public float skyboxRotationSpeed = 1;
@@ -52,6 +62,14 @@ public class GameManager : MonoBehaviour {
             instance = this;
 
             SetQuality();
+            gradeBackButton.onClick.AddListener(delegate{
+                ShowGradeMenu(false);
+                ShowSongMenu(true);
+            });
+
+            ShowSongMenu(true);
+            ShowGameMenu(false);
+            ShowGradeMenu(false);
 
             if (production){
                 beatmapRepositoryPath = Path.Combine(Application.persistentDataPath, beatmapRepositoryPath);
@@ -130,13 +148,20 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    public static void ShowSongMenu(){
-        instance.songMenu.gameObject.SetActive(true);
+    public static void ShowGameMenu(bool show){
+        instance.gameMenu.gameObject.SetActive(show);
     }
 
-    public static void HideSongMenu(){
-        SongButtonHeader.HideAllList();
-        instance.songMenu.gameObject.SetActive(false);
+    public static void ShowGradeMenu(bool show){
+        instance.gradeMenu.gameObject.SetActive(show);
+    }
+
+    public static void ShowSongMenu(bool show){
+        instance.songMenu.gameObject.SetActive(show);
+
+        if (!show) {
+            SongButtonHeader.HideAllList();
+        }
     }
 
 	public static void LoadAllBeatmapsIntoMenu() {
@@ -275,7 +300,8 @@ public class GameManager : MonoBehaviour {
             gameState = 0;
         }
 
-        HideSongMenu();
+        ShowSongMenu(false);
+        ShowGameMenu(true);
         currentBeatmapOszName = oszName;
         currentBeatmapOsuId = osuId;
         BeatmapGame.instance.StartBeatmap(beatmap);
@@ -283,10 +309,6 @@ public class GameManager : MonoBehaviour {
 
     public static void Stop(){
         gameState = gameState & ~GameState.Started;
-
-        ShowSongMenu();
-
-        // instance.StartBeatmap(currentBeatmapOszName, currentBeatmapOsuId);
     }
 
     public static void UpdateScoreText(string score){
@@ -295,6 +317,14 @@ public class GameManager : MonoBehaviour {
 
     public static void UpdateComboText(string combo){
         instance.comboText.text = "Combo: " + combo;
+    }
+
+    public static void UpdateAccuracyText(string accuracy){
+        instance.accuracyText.text = "Accuracy: " + accuracy;
+    }
+
+    public static void UpdateGradeText(string grade){
+        instance.gradeText.text = "Grade: " + grade;
     }
 
     public static void UpdateSongProgressSliderColor(Color color){
@@ -337,11 +367,11 @@ public class GameManager : MonoBehaviour {
 
         if ((gameState & GameState.Paused) == GameState.Paused){
             print("Paused");
-            ShowSongMenu();
+            ShowSongMenu(true);
             BeatmapGame.instance.musicSource.Pause();
         } else {
             print("Resumed");
-            HideSongMenu();
+            ShowSongMenu(false);
             BeatmapGame.instance.musicSource.UnPause();
         }
     }

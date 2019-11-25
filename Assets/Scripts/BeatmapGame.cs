@@ -25,7 +25,7 @@ public enum Drum {
 
 public enum Score {
     Great = 300,
-    Okay = 100,
+    Good = 100,
     Miss = 0
 }
 
@@ -34,6 +34,20 @@ public class DrumTransformPair {
     public Drum drum;
     public Transform drumTransform;
     public Transform drumMarkerTransform;
+}
+
+public struct BeatsHit {
+    public int Great;
+    public int Good;
+    public int Miss;
+}
+
+public enum Grade {
+    SS,
+    S,
+    A,
+    B,
+    F
 }
 
 [RequireComponent(typeof(AudioSource))]
@@ -63,6 +77,9 @@ public class BeatmapGame : MonoBehaviour {
     public int songStartTimer = 0;
     public int score = 0;
     public int combo = 0;
+    public float accuracy = 1;
+
+    public BeatsHit grade;
 
     // Time it takes for beatmap to end after last beat.
     private int beatmapFade = 3000;
@@ -116,11 +133,20 @@ public class BeatmapGame : MonoBehaviour {
         approachMs = CalculateApproachMs();
 
         // Clear all old vars.
+        grade = new BeatsHit(){
+            Great = 0,
+            Good = 0,
+            Miss = 0
+        };
+
         songTimer = 0;
         latestSpawnedBeat = 0;
         closestBeat = 0;
         score = 0;
         combo = 0;
+        accuracy = CalculateAccuracy();
+
+        GameManager.UpdateAccuracyText("100%");
         GameManager.UpdateComboText(combo.ToString());
         GameManager.UpdateScoreText(score.ToString());
 
@@ -284,7 +310,7 @@ public class BeatmapGame : MonoBehaviour {
         if (Mathf.Abs(songTimer - startTime) <= beatHitGreatMs){
             score = Score.Great;
         } else if (Mathf.Abs(songTimer - startTime) <= beatHitOkayMs){
-            score = Score.Okay;
+            score = Score.Good;
         }
 
         return score;
@@ -294,7 +320,8 @@ public class BeatmapGame : MonoBehaviour {
         beat.gameObject.SetActive(false);
         closestBeat += 1;
 
-        int gain = (int) CalculateScore(beat, drum);
+        Score gainedScore = CalculateScore(beat, drum);
+        int gain = (int) gainedScore;
 
         if (gain > 0){
             combo += 1;
@@ -304,8 +331,43 @@ public class BeatmapGame : MonoBehaviour {
 
         score += gain * combo;
 
+        switch(gainedScore){
+            case Score.Great:
+                grade.Great += 1;
+                break;
+            case Score.Good:
+                grade.Good += 1;
+                break;
+            case Score.Miss:
+                grade.Miss += 1;
+                break;
+        }
+
+        accuracy = CalculateAccuracy();
+
+        GameManager.UpdateAccuracyText((accuracy * 100).ToString() + "%");
         GameManager.UpdateScoreText(score.ToString());
         GameManager.UpdateComboText(combo.ToString());
+    }
+
+    // https://osu.ppy.sh/help/wiki/Accuracy#-osu!taiko
+    private float CalculateAccuracy(){
+        return (grade.Great + 0.5f * (float) grade.Good) / (grade.Great + grade.Good + grade.Miss);
+    }
+
+    // https://osu.ppy.sh/help/wiki/FAQ#Grades
+    private Grade CalculateGrade(){
+        if (accuracy >= 1f){
+            return Grade.SS;
+        } else if (accuracy >= 0.95f){
+            return Grade.S;
+        } else if (accuracy >= 0.9f){
+            return Grade.A;
+        } else if (accuracy >= 0.8f){
+            return Grade.B;
+        } else {
+            return Grade.F;
+        }
     }
 
     // https://osu.ppy.sh/help/wiki/Beatmap_Editor/Song_Setup#approach-rate
@@ -482,6 +544,27 @@ public class BeatmapGame : MonoBehaviour {
     }
 
     public void OnSongEnd(){
+        Grade grade = CalculateGrade();
+        switch(grade){
+            case Grade.SS:
+                GameManager.UpdateGradeText("SS");
+                break;
+            case Grade.S:
+                GameManager.UpdateGradeText("S");
+                break;
+            case Grade.A:
+                GameManager.UpdateGradeText("A");
+                break;
+            case Grade.B:
+                GameManager.UpdateGradeText("B");
+                break;
+            case Grade.F:
+                GameManager.UpdateGradeText("F");
+                break;
+        }
+
         GameManager.Stop();
+        GameManager.ShowGameMenu(false);
+        GameManager.ShowGradeMenu(true);
     }
 }
