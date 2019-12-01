@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class SongButtonHeader : MonoBehaviour
 {
@@ -12,7 +13,7 @@ public class SongButtonHeader : MonoBehaviour
 	private RectTransform containerRt;
 	private RectTransform contentRt;
 	private float originalHeight;
-	private float songButtonBeatmapHeight;
+	public float songButtonBeatmapHeight;
 
 	public Text songTitle;
 	public List<SongButtonBeatmap> songButtonChildren;
@@ -26,7 +27,7 @@ public class SongButtonHeader : MonoBehaviour
 		originalHeight = GetComponent<RectTransform>().rect.height;
 		songButtons.Add(this);
 
-		button.onClick.AddListener(OpenList);
+		button.onClick.AddListener(ToggleList);
 	}
 
 	public void UpdateSongButton(string title) {
@@ -59,7 +60,7 @@ public class SongButtonHeader : MonoBehaviour
 		yield return new WaitForEndOfFrame();
 
 		contentRt.anchoredPosition = new Vector2(contentRt.anchoredPosition.x, -containerRt.anchoredPosition.y - scrollView.GetComponent<RectTransform>().rect.height/3 - songButtonBeatmapHeight/2);
-		// print(-containerRt.anchoredPosition.y - scrollView.GetComponent<RectTransform>().rect.height/3 - songButtonBeatmapHeight/2);
+		print(-containerRt.anchoredPosition.y - scrollView.GetComponent<RectTransform>().rect.height/3 - songButtonBeatmapHeight/2);
 
 		if (contentRt.anchoredPosition.y <= 0f){
 			contentRt.anchoredPosition = new Vector2(contentRt.anchoredPosition.x, 0f);
@@ -90,20 +91,24 @@ public class SongButtonHeader : MonoBehaviour
 		}
 	}
 
-	public void OpenList() {
-		// Hide all lists that isn't the clicked menu.
+	public void ToggleList() {
+		isListOpen = !isListOpen;
+
+		if (isListOpen){
+			StartCoroutine(AnimateOpenList(0.5f));
+		}
+
+		// Hide all lists that are not this. Also if it is this, check if list is open.
 		foreach(SongButtonHeader songButton in songButtons){
 			if (songButton != this){
 				songButton.HideList();
+			} else if (!isListOpen){
+				songButton.HideList();
 			}
 		}
-
-		isListOpen = true;
-		StartCoroutine(AnimateOpenList(1f));
 	}
 
 	public static void HideAllList(){
-		// Hide all lists that isn't the clicked menu.
 		foreach(SongButtonHeader songButton in songButtons){
 			songButton.HideList();
 		}

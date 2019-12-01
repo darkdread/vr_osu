@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using System.IO;
 using System.IO.Compression;
 
@@ -39,6 +40,7 @@ public class GameManager : MonoBehaviour {
 	public SongButtonHeader songButtonPrefab;
     public GameObject songButtonContainerPrefab;
 	public SongButtonBeatmap songButtonChildPrefab;
+    public GameObject currentSelectedSong;
 
     [Header("Song Grade UI")]
     public Transform gradeMenu;
@@ -164,7 +166,42 @@ public class GameManager : MonoBehaviour {
         }
     }
 
+    public static void OnSelect(BaseEventData data){
+        // RectTransform contentRt = instance.songMenuContent.GetComponent<RectTransform>();
+        // RectTransform songContainerRt = data.selectedObject.transform.parent.GetComponent<RectTransform>();
+        
+        // float height = -songContainerRt.anchoredPosition.y;
+        // // Top of content menu.
+        // height += -songContainerRt.rect.height/2;
+        // // If list is open, account for the height of list.
+        // SongButtonHeader songButtonHeader = data.selectedObject.GetComponent<SongButtonHeader>();
+
+        // if (songButtonHeader.isListOpen){
+        //     height += -songButtonHeader.songButtonBeatmapHeight/2;
+        // }
+
+        // contentRt.anchoredPosition = new Vector2(
+        //     contentRt.anchoredPosition.x, 
+        //     height);
+
+        RectTransform contentRt = instance.songMenuContent.GetComponent<RectTransform>();
+        SongButtonHeader songButtonHeader = data.selectedObject.GetComponent<SongButtonHeader>();
+        SongButtonBeatmap songButtonBeatmap = data.selectedObject.GetComponent<SongButtonBeatmap>();
+
+        RectTransform containerRt = data.selectedObject.transform.parent.GetComponent<RectTransform>();
+        RectTransform currentRt = data.selectedObject.GetComponent<RectTransform>();
+
+        float x = contentRt.anchoredPosition.x;
+        contentRt.anchoredPosition =
+            (Vector2)instance.songMenu.transform.InverseTransformPoint(contentRt.position)
+            - (Vector2)instance.songMenu.transform.InverseTransformPoint(currentRt.position);
+
+        // 350f = 100 (height of header/2) + 200 (height of header) + 50 (spacing)
+        contentRt.anchoredPosition = new Vector2(x, contentRt.anchoredPosition.y - 350f);
+    }
+
 	public static void LoadAllBeatmapsIntoMenu() {
+        instance.currentSelectedSong = null;
 
 		foreach(KeyValuePair<string, List<OsuParsers.Beatmaps.Beatmap>> kvp in beatmapsDictionary) {
 			string songName = kvp.Key;
@@ -174,6 +211,19 @@ public class GameManager : MonoBehaviour {
 			// Create main song button containing all difficulties.
 			SongButtonHeader songButton = Instantiate(instance.songButtonPrefab, container);
 			songButton.UpdateSongButton(songName);
+
+            if (instance.currentSelectedSong == null){
+                instance.currentSelectedSong = songButton.gameObject;
+            }
+
+            EventTrigger eventTrigger = (EventTrigger) songButton.gameObject.AddComponent(typeof (EventTrigger));
+            EventTrigger.Entry eventTriggerEntry = new EventTrigger.Entry();
+            eventTriggerEntry.eventID = EventTriggerType.Select;
+            eventTriggerEntry.callback.AddListener((data) => {
+                OnSelect(data);
+            });
+
+            eventTrigger.triggers.Add(eventTriggerEntry);
 
             int songId = 0;
 
@@ -188,12 +238,21 @@ public class GameManager : MonoBehaviour {
 				float difficulty = beatmap.DifficultySection.ApproachRate;
 
                 if (beatmap.GeneralSection.Mode == OsuParsers.Enums.Ruleset.Mania){
-                    print(string.Format("Osz: {0}, version: {1}, mode: {2}", songName, beatmapVersion, beatmap.GeneralSection.Mode));
+                    print(string.Format("Skipping parsing of: Osz: {0}, version: {1}, mode: {2}", songName, beatmapVersion, beatmap.GeneralSection.Mode));
                     songId += 1;
                     continue;
                 }
 
 				SongButtonBeatmap songButtonChild = Instantiate(instance.songButtonChildPrefab, container);
+
+                EventTrigger eventTrigger2 = (EventTrigger) songButtonChild.gameObject.AddComponent(typeof (EventTrigger));
+                EventTrigger.Entry eventTriggerEntry2 = new EventTrigger.Entry();
+                eventTriggerEntry2.eventID = EventTriggerType.Select;
+                eventTriggerEntry2.callback.AddListener((data) => {
+                    OnSelect(data);
+                });
+
+                eventTrigger2.triggers.Add(eventTriggerEntry2);
 
 				// By default, the child is inactive.
 				songButtonChild.gameObject.SetActive(false);
@@ -206,6 +265,7 @@ public class GameManager : MonoBehaviour {
 			}
 		}
 
+        EventSystem.current.SetSelectedGameObject(instance.currentSelectedSong);
 	}
 
     public static List<OsuParsers.Beatmaps.Beatmap> LoadBeatmapsFromFolder(string path){
@@ -337,6 +397,7 @@ public class GameManager : MonoBehaviour {
 
     private void Update(){
         if ((gameState & GameState.Started) == GameState.Started){
+            print(GetComponent<EventTrigger>());
 
             if (Input.GetKeyDown(KeyCode.Escape)){
                 Pause((gameState & GameState.Paused) != GameState.Paused);
