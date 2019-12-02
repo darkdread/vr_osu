@@ -397,8 +397,6 @@ public class GameManager : MonoBehaviour {
 
     private void Update(){
         if ((gameState & GameState.Started) == GameState.Started){
-            print(GetComponent<EventTrigger>());
-
             if (Input.GetKeyDown(KeyCode.Escape)){
                 Pause((gameState & GameState.Paused) != GameState.Paused);
             }
