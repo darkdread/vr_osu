@@ -55,6 +55,7 @@ public enum Grade {
 public class BeatmapGame : MonoBehaviour {
     
     public static BeatmapGame instance;
+    public const bool DEBUG_MODE = false;
 
     public List<OsuParsers.Beatmaps.Objects.HitObject> hitObjects = new List<OsuParsers.Beatmaps.Objects.HitObject>();
     public List<Beat> beats = new List<Beat>();
@@ -90,6 +91,19 @@ public class BeatmapGame : MonoBehaviour {
     public OsuParsers.Enums.Ruleset originalMode;
     public AudioSource musicSource;
     public AudioSource sfxSource;
+
+    public static Drum GetDrum(Transform t)
+    {
+        foreach (DrumTransformPair drumTransformPair in instance.drumTransformPairs)
+        {
+            if (drumTransformPair.drumTransform == t)
+            {
+                return drumTransformPair.drum;
+            }
+        }
+
+        return Drum.Left;
+    }
 
     private Drum ColorToDrum(TaikoColorExtended color){
         return (Drum) color;
@@ -274,7 +288,7 @@ public class BeatmapGame : MonoBehaviour {
             }
 
             // Perfect time formula: beat.hitObject.StartTime + beat.delay <= songTimer
-            if (beat.offset <= songTimer){
+            if (DEBUG_MODE && beat.offset <= songTimer){
                 HitDrum(ColorToDrum(beat.color));
             }
         }
