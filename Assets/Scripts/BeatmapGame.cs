@@ -17,6 +17,7 @@ public enum TaikoColorExtended {
 }
 
 public enum Drum {
+    Empty = -1,
     Right = 0,
     Left = 1,
     LeftSide = 2,
@@ -102,7 +103,7 @@ public class BeatmapGame : MonoBehaviour {
             }
         }
 
-        return Drum.Left;
+        return Drum.Empty;
     }
 
     private Drum ColorToDrum(TaikoColorExtended color){
@@ -257,7 +258,7 @@ public class BeatmapGame : MonoBehaviour {
         // We allow player to skip ahead.
         if (songTimer + beatmapFade < hitObjects[0].StartTime){
             if (Input.GetButtonDown("Skip Ahead")){
-                musicSource.time = (hitObjects[0].StartTime - beatmapFade) / 1000;
+                SkipAheadToFirstBeat();
             }
         }
 
@@ -293,20 +294,36 @@ public class BeatmapGame : MonoBehaviour {
             }
         }
 
-        if (Input.GetButtonDown(ButtonsMapping.LeftDrum)){
-            HitDrum(Drum.Left);
-        }
+        if (DEBUG_MODE)
+        {
+            if (Input.GetButtonDown(ButtonsMapping.LeftDrum))
+            {
+                HitDrum(Drum.Left);
+            }
 
-        if (Input.GetButtonDown(ButtonsMapping.RightDrum)){
-            HitDrum(Drum.Right);
-        }
+            if (Input.GetButtonDown(ButtonsMapping.RightDrum))
+            {
+                HitDrum(Drum.Right);
+            }
 
-        if (Input.GetButtonDown(ButtonsMapping.LeftSideDrum)){
-            HitDrum(Drum.LeftSide);
-        }
+            if (Input.GetButtonDown(ButtonsMapping.LeftSideDrum))
+            {
+                HitDrum(Drum.LeftSide);
+            }
 
-        if (Input.GetButtonDown(ButtonsMapping.RightSideDrum)){
-            HitDrum(Drum.RightSide);
+            if (Input.GetButtonDown(ButtonsMapping.RightSideDrum))
+            {
+                HitDrum(Drum.RightSide);
+            }
+        }
+    }
+
+    public static void SkipAheadToFirstBeat()
+    {
+        float firstBeatTime = (instance.hitObjects[0].StartTime - instance.beatmapFade) / 1000;
+        if (instance.musicSource.time < firstBeatTime)
+        {
+            instance.musicSource.time = firstBeatTime;
         }
     }
 
@@ -405,6 +422,17 @@ public class BeatmapGame : MonoBehaviour {
         // gameLight.enabled = true;
     }
 
+    //length is how long the vibration should go for
+    //strength is vibration strength from 0-1
+    IEnumerator LongVibration(float length, float strength)
+    {
+        for (float i = 0; i < length; i += Time.deltaTime)
+        {
+            SteamVR_Controller.Input(0).TriggerHapticPulse((ushort)Mathf.Lerp(0, 3999, strength));
+            yield return null;
+        }
+    }
+
     public void HitDrum(Drum drum){
         // Get closest beat within song timer.
         Beat beat = GetClosestBeat();
@@ -421,6 +449,7 @@ public class BeatmapGame : MonoBehaviour {
                 return;
             }
 
+            StartCoroutine(LongVibration(0.1f, 1f));
             StartCoroutine(SetMaterialEmissionColor(GetDrumMarkerTransformPair(drum).drumTransform.GetComponent<MeshRenderer>().material, Color.white));
 
             sfxSource.PlayOneShot(drumSfx);
@@ -579,6 +608,7 @@ public class BeatmapGame : MonoBehaviour {
 
         GameManager.Stop();
         GameManager.ShowGameMenu(false);
+        GameManager.ShowSongMenu(false);
         GameManager.ShowGradeMenu(true);
     }
 }

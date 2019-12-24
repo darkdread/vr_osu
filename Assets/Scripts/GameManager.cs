@@ -36,6 +36,7 @@ public class GameManager : MonoBehaviour {
 
     [Header("Song Menu UI")]
     public Transform songMenu;
+    public Transform songMenuScrollRect;
 	public Transform songMenuContent;
 	public SongButtonHeader songButtonPrefab;
     public GameObject songButtonContainerPrefab;
@@ -193,8 +194,8 @@ public class GameManager : MonoBehaviour {
 
         float x = contentRt.anchoredPosition.x;
         contentRt.anchoredPosition =
-            (Vector2)instance.songMenu.transform.InverseTransformPoint(contentRt.position)
-            - (Vector2)instance.songMenu.transform.InverseTransformPoint(currentRt.position);
+            (Vector2)instance.songMenuScrollRect.transform.InverseTransformPoint(contentRt.position)
+            - (Vector2)instance.songMenuScrollRect.transform.InverseTransformPoint(currentRt.position);
 
         // 350f = 100 (height of header/2) + 200 (height of header) + 50 (spacing)
         contentRt.anchoredPosition = new Vector2(x, contentRt.anchoredPosition.y - 350f);
