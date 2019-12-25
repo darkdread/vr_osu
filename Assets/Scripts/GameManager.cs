@@ -19,7 +19,7 @@ public class GameManager : MonoBehaviour {
     
     // https://github.com/mrflashstudio/OsuParsers.
     public static string beatmapRepositoryPath = "Assets/Beatmaps/";
-    public static string beatmapExtractedPath = "Assets/Beatmaps/Temp/";
+    public static string beatmapExtractedPath = "Assets/Resources/Beatmaps/Temp/";
 
     public static string currentBeatmapOszName;
     public static int currentBeatmapOsuId;
@@ -145,6 +145,7 @@ public class GameManager : MonoBehaviour {
 			// StartBeatmap("109852 Foster The People - Pumped Up Kicks.osz", 1);
 
 			LoadAllBeatmapsIntoMenu();
+            StartBeatmap("30768 Joe Inoue - CLOSER (TV Size).osz", 5);
 
 		} else {
             Destroy(gameObject);
@@ -282,6 +283,23 @@ public class GameManager : MonoBehaviour {
         }
 
         return beatmaps;
+    }
+
+    public static AudioClip GetBeatmapAudioClip(OsuParsers.Beatmaps.Beatmap beatmap){
+        DirectoryInfo info = new DirectoryInfo(Path.Combine(beatmapExtractedPath, currentBeatmapOszName));
+        FileInfo audioFile = info.GetFiles(beatmap.GeneralSection.AudioFilename)[0];
+
+        // C:\Users\Rey\Desktop\vr_osu\Assets\Resources\Beatmaps\Temp\30768 Joe Inoue - CLOSER (TV Size).osz\CLOSE BONUS.mp3
+        print("file://" + audioFile.FullName);
+
+        // "Beatmaps\\Temp\\30768 Joe Inoue - CLOSER (TV Size).osz\\"
+        string resourcesPath = audioFile.DirectoryName.Split(new string[] {"Assets\\Resources\\"}, System.StringSplitOptions.None)[1];
+        string path = Path.Combine(resourcesPath, Path.GetFileNameWithoutExtension(audioFile.Name));
+        print("file://" + path);
+
+        AudioClip clip = Resources.Load<AudioClip>(path);
+        print(clip);
+        return clip;
     }
 
     public static IEnumerator GetBeatmapAudioClip(OsuParsers.Beatmaps.Beatmap beatmap, System.Action<AudioClip> callback){

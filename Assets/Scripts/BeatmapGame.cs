@@ -182,8 +182,12 @@ public class BeatmapGame : MonoBehaviour {
             }
         }
 
+        // Read from Resources folder.
+        AudioClip clip = GameManager.GetBeatmapAudioClip(beatmap);
+        PlayBeatmapSong(clip);
+
         // Read mp3 file from local disk and convert byte to PCM. Look at MP3Sharp.
-        StartCoroutine(GameManager.GetBeatmapAudioClip(beatmap, PlayBeatmapSong));
+        // StartCoroutine(GameManager.GetBeatmapAudioClip(beatmap, PlayBeatmapSong));
 
         // GameManager.gameState = GameManager.gameState | GameState.Started;
     }
