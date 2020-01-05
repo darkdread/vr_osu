@@ -46,6 +46,11 @@ public class GameManager : MonoBehaviour {
     [Header("Song Grade UI")]
     public Transform gradeMenu;
     public Text gradeText;
+    public Text greatText;
+    public Text goodText;
+    public Text missText;
+    public Text comboScoreText;
+    public Text accuracyScoreText;
     public Button gradeBackButton;
 
     [Header("Skybox")]
@@ -404,6 +409,17 @@ public class GameManager : MonoBehaviour {
 
     public static void UpdateGradeText(string grade){
         instance.gradeText.text = "Grade: " + grade;
+    }
+
+    public static void UpdateScoreboardText(int great, int good, int miss, int combo, float accuracy){
+        instance.greatText.text = great.ToString() + "x";
+        instance.goodText.text = good.ToString() + "x";
+        instance.missText.text = miss.ToString() + "x";
+        instance.comboScoreText.text = combo.ToString() + "x";
+
+        // Round to 2 sig fig.
+        accuracy = Mathf.Floor(accuracy * 10000) / 100f;
+        instance.accuracyScoreText.text = accuracy.ToString() + "%";
     }
 
     public static void UpdateSongProgressSliderColor(Color color){

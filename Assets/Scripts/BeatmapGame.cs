@@ -56,7 +56,7 @@ public enum Grade {
 public class BeatmapGame : MonoBehaviour {
     
     public static BeatmapGame instance;
-    public const bool DEBUG_MODE = false;
+    public const bool DEBUG_MODE = true;
 
     public List<OsuParsers.Beatmaps.Objects.HitObject> hitObjects = new List<OsuParsers.Beatmaps.Objects.HitObject>();
     public List<Beat> beats = new List<Beat>();
@@ -65,12 +65,14 @@ public class BeatmapGame : MonoBehaviour {
     public Light gameLight;
     public Beat beatPrefab;
     public Transform beatHolder;
+    public Transform lineIndicatorHolder;
+    public GameObject lineIndicator;
     public AudioClip drumSfx;
 
     public int beatHitGreatMs = 30;
-    public int beatHitOkayMs = 50;
-    public int beatHitRegisterAsHitMs = 300;
-    public float beatSpeed = 3f;
+    public int beatHitGoodMs = 50;
+    public int beatHitRegisterAsHitMs = 100;
+    public float beatSpeed = 20f;
 
     public float approachRate;
     public int beatmapDuration;
@@ -81,7 +83,7 @@ public class BeatmapGame : MonoBehaviour {
     public int combo = 0;
     public float accuracy = 1;
 
-    public BeatsHit grade;
+    public BeatsHit beatsHit;
 
     // Time it takes for beatmap to end after last beat.
     private int beatmapFade = 3000;
@@ -120,6 +122,22 @@ public class BeatmapGame : MonoBehaviour {
         return null;
     }
 
+    private void SpawnLinesIndicator(){
+        foreach(Transform t in lineIndicatorHolder){
+            Destroy(t.gameObject);
+        }
+
+        // beatTransform.position = GetDrumMarkerTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
+
+        GameObject lineGreat = Instantiate(lineIndicator, lineIndicatorHolder);
+        lineGreat.transform.position += -Vector3.forward + Vector3.forward * (((float) beatHitGreatMs / 200) * beatSpeed);
+        lineGreat.name = "LineGreatIndicator";
+
+        GameObject lineGood = Instantiate(lineIndicator, lineIndicatorHolder);
+        lineGood.transform.position += -Vector3.forward + Vector3.forward * (((float) beatHitGoodMs / 200) * beatSpeed);
+        lineGood.name = "LineGoodIndicator";
+    }
+
     void Awake(){
         if (instance == null){
             instance = this;
@@ -148,7 +166,7 @@ public class BeatmapGame : MonoBehaviour {
         approachMs = CalculateApproachMs();
 
         // Clear all old vars.
-        grade = new BeatsHit(){
+        beatsHit = new BeatsHit(){
             Great = 0,
             Good = 0,
             Miss = 0
@@ -202,6 +220,8 @@ public class BeatmapGame : MonoBehaviour {
     private IEnumerator DelayPlay(AudioClip audioClip, int ms){
         GameManager.UpdateSongProgressSliderColor(Color.red);
         GameManager.UpdateSongProgressSlider((float) 1f);
+
+        SpawnLinesIndicator();
 
         // Just wait 1 second 4HEad. Because the game is lagging.
         yield return new WaitForSeconds(1f);
@@ -288,8 +308,13 @@ public class BeatmapGame : MonoBehaviour {
             beatTransform.position = GetDrumMarkerTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
 
             // Miss.
-            if (beat.offset + beatHitOkayMs < songTimer){
+            if (beat.offset + beatHitGoodMs < songTimer){
                 ScoreBeat(beat, Drum.Left);
+            }
+
+            // Good Hit.
+            if (DEBUG_MODE && beat.offset - beatHitGoodMs <= songTimer){
+                HitDrum(ColorToDrum(beat.color));
             }
 
             // Perfect time formula: beat.hitObject.StartTime + beat.delay <= songTimer
@@ -342,9 +367,10 @@ public class BeatmapGame : MonoBehaviour {
             return score;
         }
 
-        if (Mathf.Abs(songTimer - startTime) <= beatHitGreatMs){
+        float deltaOffset = Mathf.Abs(songTimer - startTime);
+        if (deltaOffset <= beatHitGreatMs){
             score = Score.Great;
-        } else if (Mathf.Abs(songTimer - startTime) <= beatHitOkayMs){
+        } else if (deltaOffset <= beatHitGoodMs){
             score = Score.Good;
         }
 
@@ -368,13 +394,13 @@ public class BeatmapGame : MonoBehaviour {
 
         switch(gainedScore){
             case Score.Great:
-                grade.Great += 1;
+                beatsHit.Great += 1;
                 break;
             case Score.Good:
-                grade.Good += 1;
+                beatsHit.Good += 1;
                 break;
             case Score.Miss:
-                grade.Miss += 1;
+                beatsHit.Miss += 1;
                 break;
         }
 
@@ -387,7 +413,7 @@ public class BeatmapGame : MonoBehaviour {
 
     // https://osu.ppy.sh/help/wiki/Accuracy#-osu!taiko
     private float CalculateAccuracy(){
-        return (grade.Great + 0.5f * (float) grade.Good) / (grade.Great + grade.Good + grade.Miss);
+        return (beatsHit.Great + 0.5f * (float) beatsHit.Good) / (beatsHit.Great + beatsHit.Good + beatsHit.Miss);
     }
 
     // https://osu.ppy.sh/help/wiki/FAQ#Grades
@@ -609,6 +635,8 @@ public class BeatmapGame : MonoBehaviour {
                 GameManager.UpdateGradeText("F");
                 break;
         }
+
+        GameManager.UpdateScoreboardText(beatsHit.Great, beatsHit.Good, beatsHit.Miss, combo, accuracy);
 
         GameManager.Stop();
         GameManager.ShowGameMenu(false);
