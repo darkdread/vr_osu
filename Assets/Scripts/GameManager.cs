@@ -45,12 +45,12 @@ public class GameManager : MonoBehaviour {
 
     [Header("Song Grade UI")]
     public Transform gradeMenu;
-    public Text gradeText;
-    public Text greatText;
-    public Text goodText;
-    public Text missText;
-    public Text comboScoreText;
-    public Text accuracyScoreText;
+    public TMPro.TextMeshProUGUI gradeText;
+    public TMPro.TextMeshProUGUI greatText;
+    public TMPro.TextMeshProUGUI goodText;
+    public TMPro.TextMeshProUGUI missText;
+    public TMPro.TextMeshProUGUI comboScoreText;
+    public TMPro.TextMeshProUGUI accuracyScoreText;
     public Button gradeBackButton;
 
     [Header("Skybox")]
@@ -163,6 +163,7 @@ public class GameManager : MonoBehaviour {
 
     public static void ShowGradeMenu(bool show){
         instance.gradeMenu.gameObject.SetActive(show);
+        EventSystem.current.SetSelectedGameObject(instance.gradeBackButton.gameObject);
     }
 
     public static void ShowSongMenu(bool show){
@@ -170,6 +171,11 @@ public class GameManager : MonoBehaviour {
 
         if (!show) {
             SongButtonHeader.HideAllList();
+        } else {
+            if (instance.currentSelectedSong != null){
+                EventSystem.current.SetSelectedGameObject(instance.currentSelectedSong);
+                print(instance.currentSelectedSong.GetComponent<SongButtonHeader>().songTitle.text);
+            }
         }
     }
 
@@ -388,6 +394,9 @@ public class GameManager : MonoBehaviour {
         ShowGameMenu(true);
         currentBeatmapOszName = oszName;
         currentBeatmapOsuId = osuId;
+        currentSelectedSong = SongButtonHeader.GetSongButtonHeader(oszName).gameObject;
+        print(currentSelectedSong.GetComponent<SongButtonHeader>().songTitle.text);
+
         BeatmapGame.instance.StartBeatmap(beatmap);
     }
 
@@ -408,7 +417,7 @@ public class GameManager : MonoBehaviour {
     }
 
     public static void UpdateGradeText(string grade){
-        instance.gradeText.text = "Grade: " + grade;
+        instance.gradeText.text = grade;
     }
 
     public static void UpdateScoreboardText(int great, int good, int miss, int combo, float accuracy){

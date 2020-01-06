@@ -19,6 +19,16 @@ public class SongButtonHeader : MonoBehaviour
 	public List<SongButtonBeatmap> songButtonChildren;
 	public bool isListOpen = false;
 
+	public static SongButtonHeader GetSongButtonHeader(string songName){
+		foreach(SongButtonHeader songButtonHeader in songButtons){
+			if (songButtonHeader.songTitle.text == songName){
+				return songButtonHeader;
+			}
+		}
+
+		return null;
+	}
+
 	private void Awake() {
 		button = GetComponent<Button>();
 		scrollView = GetComponentInParent<ScrollRect>();

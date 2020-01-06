@@ -6489,9 +6489,9 @@ MonoBehaviour:
   lineIndicator: {fileID: 2565891484779841097, guid: bcac52e9135a5904695e5d9943b52b5e,
     type: 3}
   drumSfx: {fileID: 8300000, guid: 07c89efa8ad6f9943a9bda562d038565, type: 3}
-  beatHitGreatMs: 30
-  beatHitGoodMs: 50
-  beatHitRegisterAsHitMs: 100
+  beatHitGreatMs: 50
+  beatHitGoodMs: 100
+  beatHitRegisterAsHitMs: 150
   beatSpeed: 20
   approachRate: 0
   beatmapDuration: 0
@@ -18347,7 +18347,12 @@ MonoBehaviour:
     type: 3}
   currentSelectedSong: {fileID: 0}
   gradeMenu: {fileID: 1319336327}
-  gradeText: {fileID: 0}
+  gradeText: {fileID: 1179373891}
+  greatText: {fileID: 550900746}
+  goodText: {fileID: 1116152759}
+  missText: {fileID: 447053791}
+  comboScoreText: {fileID: 2144019983}
+  accuracyScoreText: {fileID: 25246445}
   gradeBackButton: {fileID: 1112689881}
   skyboxMaterial: {fileID: 2100000, guid: ceb0a3ed2cb53a94fa21843cc958c52b, type: 2}
   skyboxRotation: 0
