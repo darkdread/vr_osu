@@ -150,7 +150,7 @@ public class GameManager : MonoBehaviour {
 			// StartBeatmap("109852 Foster The People - Pumped Up Kicks.osz", 1);
 
 			LoadAllBeatmapsIntoMenu();
-            StartBeatmap("30768 Joe Inoue - CLOSER (TV Size).osz", 5);
+            //StartBeatmap("30768 Joe Inoue - CLOSER (TV Size).osz", 5);
 
 		} else {
             Destroy(gameObject);
@@ -173,6 +173,7 @@ public class GameManager : MonoBehaviour {
             SongButtonHeader.HideAllList();
         } else {
             if (instance.currentSelectedSong != null){
+                EventSystem.current.SetSelectedGameObject(null);
                 EventSystem.current.SetSelectedGameObject(instance.currentSelectedSong);
                 print(instance.currentSelectedSong.GetComponent<SongButtonHeader>().songTitle.text);
             }
@@ -180,6 +181,7 @@ public class GameManager : MonoBehaviour {
     }
 
     public static void OnSelect(BaseEventData data){
+        print("onselect");
         // RectTransform contentRt = instance.songMenuContent.GetComponent<RectTransform>();
         // RectTransform songContainerRt = data.selectedObject.transform.parent.GetComponent<RectTransform>();
         
@@ -441,7 +443,7 @@ public class GameManager : MonoBehaviour {
 
     private void Update(){
         if ((gameState & GameState.Started) == GameState.Started){
-            if (Input.GetKeyDown(KeyCode.Escape)){
+            if (Input.GetButtonDown("Pause")){
                 Pause((gameState & GameState.Paused) != GameState.Paused);
             }
 

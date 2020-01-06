@@ -56,7 +56,7 @@ public enum Grade {
 public class BeatmapGame : MonoBehaviour {
     
     public static BeatmapGame instance;
-    public const bool DEBUG_MODE = true;
+    public const bool DEBUG_MODE = false;
 
     public List<OsuParsers.Beatmaps.Objects.HitObject> hitObjects = new List<OsuParsers.Beatmaps.Objects.HitObject>();
     public List<Beat> beats = new List<Beat>();
@@ -130,11 +130,11 @@ public class BeatmapGame : MonoBehaviour {
         // beatTransform.position = GetDrumMarkerTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
 
         GameObject lineGreat = Instantiate(lineIndicator, lineIndicatorHolder);
-        lineGreat.transform.position += -Vector3.forward + Vector3.forward * (((float) beatHitGreatMs / 200) * beatSpeed);
+        lineGreat.transform.localPosition += -Vector3.forward + Vector3.forward * (((float) beatHitGreatMs / 200) * beatSpeed);
         lineGreat.name = "LineGreatIndicator";
 
         GameObject lineGood = Instantiate(lineIndicator, lineIndicatorHolder);
-        lineGood.transform.position += -Vector3.forward + Vector3.forward * (((float) beatHitGoodMs / 200) * beatSpeed);
+        lineGood.transform.localPosition += -Vector3.forward + Vector3.forward * (((float) beatHitGoodMs / 200) * beatSpeed);
         lineGood.name = "LineGoodIndicator";
     }
 
@@ -274,7 +274,7 @@ public class BeatmapGame : MonoBehaviour {
         songTimer = (int)(musicSource.time * 1000);
         GameManager.UpdateSongProgressSlider((float) songTimer/beatmapDuration);
 
-        if (songTimer >= beatmapDuration + beatmapFade){
+        if (songTimer >= beatmapDuration){
             OnSongEnd();
             return;
         }
@@ -323,7 +323,7 @@ public class BeatmapGame : MonoBehaviour {
             }
         }
 
-        if (DEBUG_MODE)
+        if (DEBUG_MODE || true)
         {
             if (Input.GetButtonDown(ButtonsMapping.LeftDrum))
             {
@@ -617,6 +617,7 @@ public class BeatmapGame : MonoBehaviour {
     }
 
     public void OnSongEnd(){
+        print("OnSongEnd");
         Grade grade = CalculateGrade();
         switch(grade){
             case Grade.SS:
