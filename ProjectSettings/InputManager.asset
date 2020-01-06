@@ -330,7 +330,7 @@ InputManager:
     descriptiveName: Skip ahead to first beat
     descriptiveNegativeName: 
     negativeButton: 
-    positiveButton: q
+    positiveButton: x
     altNegativeButton: 
     altPositiveButton: joystick button 8
     gravity: 1000

@@ -637,7 +637,7 @@ public class BeatmapGame : MonoBehaviour {
                 break;
         }
 
-        GameManager.UpdateScoreboardText(beatsHit.Great, beatsHit.Good, beatsHit.Miss, combo, accuracy);
+        GameManager.UpdateScoreboardText(beatsHit.Great, beatsHit.Good, beatsHit.Miss, combo, accuracy, score);
 
         GameManager.Stop();
         GameManager.ShowGameMenu(false);

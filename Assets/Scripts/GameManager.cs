@@ -49,8 +49,9 @@ public class GameManager : MonoBehaviour {
     public TMPro.TextMeshProUGUI greatText;
     public TMPro.TextMeshProUGUI goodText;
     public TMPro.TextMeshProUGUI missText;
-    public TMPro.TextMeshProUGUI comboScoreText;
-    public TMPro.TextMeshProUGUI accuracyScoreText;
+    public TMPro.TextMeshProUGUI gradeComboText;
+    public TMPro.TextMeshProUGUI gradeAccuracyText;
+    public TMPro.TextMeshProUGUI gradeScoreText;
     public Button gradeBackButton;
 
     [Header("Skybox")]
@@ -422,15 +423,17 @@ public class GameManager : MonoBehaviour {
         instance.gradeText.text = grade;
     }
 
-    public static void UpdateScoreboardText(int great, int good, int miss, int combo, float accuracy){
+    public static void UpdateScoreboardText(int great, int good, int miss, int combo, float accuracy, int score){
         instance.greatText.text = great.ToString() + "x";
         instance.goodText.text = good.ToString() + "x";
         instance.missText.text = miss.ToString() + "x";
-        instance.comboScoreText.text = combo.ToString() + "x";
+        instance.gradeComboText.text = combo.ToString() + "x";
 
         // Round to 2 sig fig.
         accuracy = Mathf.Floor(accuracy * 10000) / 100f;
-        instance.accuracyScoreText.text = accuracy.ToString() + "%";
+        instance.gradeAccuracyText.text = accuracy.ToString() + "%";
+
+        instance.gradeScoreText.text = score.ToString();
     }
 
     public static void UpdateSongProgressSliderColor(Color color){

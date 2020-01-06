@@ -10,9 +10,9 @@ public class SongButtonBeatmap : MonoBehaviour
 	private string beatmapTitle;
 	private int beatmapId;
 
-	public Text songVersionText;
-	public Text songDifficultyText;
-	public Text songOriginalModeText;
+	public TMPro.TextMeshProUGUI songVersionText;
+	public TMPro.TextMeshProUGUI songDifficultyText;
+	public TMPro.TextMeshProUGUI songOriginalModeText;
 
 	private void Awake(){
 		button = GetComponent<Button>();
