@@ -1,11 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 
 public enum GameState {
     Started = 0x01,
@@ -18,12 +20,17 @@ public class GameManager : MonoBehaviour {
     public static GameState gameState; 
     
     // https://github.com/mrflashstudio/OsuParsers.
-    public static string beatmapRepositoryPath = "Assets/Beatmaps/";
+    public static string beatmapRepositoryPath = "Assets/Resources/Beatmaps/";
     public static string beatmapExtractedPath = "Assets/Resources/Beatmaps/Temp/";
+    public static string beatmapRankingPath = "Assets/Resources/Beatmaps/Rankings/";
 
     public static string currentBeatmapOszName;
+    public static string currentBeatmapSongTitle;
+    public static string currentBeatmapSongVersion;
     public static int currentBeatmapOsuId;
     public static bool production = false;
+
+    private static SongVersionRanking currentSongVersionRanking;
 
     private static Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>> beatmapsDictionary = new Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>>();
 
@@ -41,7 +48,12 @@ public class GameManager : MonoBehaviour {
 	public SongButtonHeader songButtonPrefab;
     public GameObject songButtonContainerPrefab;
 	public SongButtonBeatmap songButtonChildPrefab;
-    public GameObject currentSelectedSong;
+
+    public Transform songButtonRankingContent;
+    public SongButtonRanking songButtonRankingPrefab;
+    public GameObject currentSelectedSongHeader;
+    public GameObject currentSelectedSongBeatmap;
+    public GameObject currentSelectedSongButtonRankingButton;
 
     [Header("Song Grade UI")]
     public Transform gradeMenu;
@@ -53,6 +65,8 @@ public class GameManager : MonoBehaviour {
     public TMPro.TextMeshProUGUI gradeAccuracyText;
     public TMPro.TextMeshProUGUI gradeScoreText;
     public Button gradeBackButton;
+
+    public static bool backToSelectRank = false;
 
     [Header("Skybox")]
     public Material skyboxMaterial;
@@ -73,7 +87,7 @@ public class GameManager : MonoBehaviour {
             SetQuality();
             gradeBackButton.onClick.AddListener(delegate{
                 ShowGradeMenu(false);
-                ShowSongMenu(true);
+                ShowSongMenu(true, !backToSelectRank);
             });
 
             ShowSongMenu(true);
@@ -162,47 +176,173 @@ public class GameManager : MonoBehaviour {
         instance.gameMenu.gameObject.SetActive(show);
     }
 
+    private static SongVersionRanking GetSongDataRanking(SongRanking sr, string version){
+        for(int j = 0; j < sr.songVersionRanking.Length; j++){
+            SongVersionRanking sdr = sr.songVersionRanking[j];
+
+            if (sdr.songVersion == version){
+                return sdr;
+            }
+        }
+
+        SongVersionRanking songDataRanking = new SongVersionRanking(){
+            songVersion = version,
+            rankings = new SongPlayRanking[0]
+        };
+
+        sr.songVersionRanking = sr.songVersionRanking.Append(songDataRanking).ToArray();
+        return songDataRanking;
+    }
+
+    public static SongRanking LoadScore(string songTitle){
+        if (File.Exists(Path.Combine(beatmapRankingPath, $"{songTitle}.json"))){
+            string jsonString = File.ReadAllText(Path.Combine(beatmapRankingPath, $"{songTitle}.json"));
+
+            return JsonUtility.FromJson<SongRanking>(jsonString);
+        }
+
+        return null;
+    }
+
+    public static void SaveScore(SongPlayRanking ranking){
+        SongRanking sr = LoadScore(currentBeatmapSongTitle);
+
+        if (sr == null){
+            sr = new SongRanking(){
+                songTitle = currentBeatmapSongTitle,
+                songVersionRanking = new SongVersionRanking[0]
+            };
+        }
+
+        // Append to songRankings if title doesn't exist.
+        // SongRanking sr = GetSongRanking(currentBeatmapSongTitle);
+
+        // Append to sr.songDataRanking if version doesn't exist.
+        SongVersionRanking sdr = GetSongDataRanking(sr, currentBeatmapSongVersion);
+        sdr.rankings = sdr.rankings.Append(ranking).ToArray();
+
+        string myJson = JsonUtility.ToJson(sr);
+
+        if (!Directory.Exists(beatmapRankingPath)){
+            Directory.CreateDirectory(beatmapRankingPath);
+        }
+
+        FileStream fs = File.Create(Path.Combine(beatmapRankingPath, $"{currentBeatmapSongTitle}.json"));
+        byte[] jsonToBytes = new UTF8Encoding(true).GetBytes(myJson);
+
+        fs.Write(jsonToBytes, 0, jsonToBytes.Length);
+        fs.Close();
+    }
+
     public static void ShowGradeMenu(bool show){
         instance.gradeMenu.gameObject.SetActive(show);
         EventSystem.current.SetSelectedGameObject(instance.gradeBackButton.gameObject);
     }
 
-    public static void ShowSongMenu(bool show){
+    public static void ShowSongMenu(bool show, bool selectSong = true){
         instance.songMenu.gameObject.SetActive(show);
 
         if (!show) {
             SongButtonHeader.HideAllList();
         } else {
-            if (instance.currentSelectedSong != null){
+            if (selectSong && instance.currentSelectedSongHeader){
                 EventSystem.current.SetSelectedGameObject(null);
-                EventSystem.current.SetSelectedGameObject(instance.currentSelectedSong);
-                print(instance.currentSelectedSong.GetComponent<SongButtonHeader>().songTitle.text);
+                EventSystem.current.SetSelectedGameObject(instance.currentSelectedSongHeader);
+            } else {
+                if (instance.currentSelectedSongButtonRankingButton){
+                    SongButtonBeatmap isBeatmap = instance.currentSelectedSongBeatmap.GetComponent<SongButtonBeatmap>();
+
+                    if (isBeatmap){
+                        instance.StartCoroutine(isBeatmap.GetSongButtonHeader().AnimateOpenList(0f));
+                    }
+
+                    EventSystem.current.SetSelectedGameObject(null);
+                    EventSystem.current.SetSelectedGameObject(instance.currentSelectedSongButtonRankingButton);
+                    
+                    backToSelectRank = false;
+                }
             }
         }
     }
 
-    public static void OnSelect(BaseEventData data){
-        print("onselect");
-        // RectTransform contentRt = instance.songMenuContent.GetComponent<RectTransform>();
-        // RectTransform songContainerRt = data.selectedObject.transform.parent.GetComponent<RectTransform>();
-        
-        // float height = -songContainerRt.anchoredPosition.y;
-        // // Top of content menu.
-        // height += -songContainerRt.rect.height/2;
-        // // If list is open, account for the height of list.
-        // SongButtonHeader songButtonHeader = data.selectedObject.GetComponent<SongButtonHeader>();
+    public static void CreateRankingUiFromSongVersionRanking(SongVersionRanking songVersionRanking){
+        print("CreateRankingUiFromSongVersionRanking()");
 
-        // if (songButtonHeader.isListOpen){
-        //     height += -songButtonHeader.songButtonBeatmapHeight/2;
-        // }
+        instance.currentSelectedSongButtonRankingButton = null;
 
-        // contentRt.anchoredPosition = new Vector2(
-        //     contentRt.anchoredPosition.x, 
-        //     height);
+        List<Button> buttons = new List<Button>();
+
+        songVersionRanking.rankings = songVersionRanking.rankings.OrderByDescending(songPlayRanking => songPlayRanking.score).ToArray();
+
+        for(int i = 0; i < songVersionRanking.rankings.Length; i++){
+            SongPlayRanking songPlayRanking = songVersionRanking.rankings[i];
+            SongButtonRanking songButtonRanking = Instantiate(instance.songButtonRankingPrefab, instance.songButtonRankingContent);
+
+            if (i == 0){
+                instance.currentSelectedSongButtonRankingButton = songButtonRanking.gameObject;
+            }
+
+            EventTrigger eventTrigger = (EventTrigger) songButtonRanking.gameObject.AddComponent(typeof (EventTrigger));
+            EventTrigger.Entry eventTriggerEntry = new EventTrigger.Entry();
+            eventTriggerEntry.eventID = EventTriggerType.Select;
+            eventTriggerEntry.callback.AddListener((data) => {
+                OnSongButtonRankingSelect(data);
+            });
+
+            eventTrigger.triggers.Add(eventTriggerEntry);
+
+            songButtonRanking.SetRanking(songPlayRanking);
+            buttons.Add(songButtonRanking.GetComponent<Button>());
+        }
+
+        for(int i = 0; i < songVersionRanking.rankings.Length; i++){
+            Button b = buttons[i];
+            Navigation n = b.navigation;
+
+            n.mode = Navigation.Mode.Explicit;
+            if (i > 0){
+                n.selectOnUp = buttons[i - 1];
+            }
+            if (i < buttons.Count - 1){
+                n.selectOnDown = buttons[i + 1];
+            }
+
+            b.navigation = n;
+        }
+    }
+
+    public static void OnSongButtonBeatmapSelect(BaseEventData data){
+        SongButtonBeatmap songButtonBeatmap = data.selectedObject.GetComponent<SongButtonBeatmap>();
+
+        // Don't create ranking ui again if it's the same button.
+        if (instance.currentSelectedSongBeatmap == songButtonBeatmap.gameObject){
+            // return;
+        }
+
+        SongRanking songRanking = LoadScore(songButtonBeatmap.beatmapTitle);
+
+        if (songRanking == null){
+            return;
+        }
+
+        for(int i = 0; i < songRanking.songVersionRanking.Length; i++){
+            SongVersionRanking songVersionRanking = songRanking.songVersionRanking[i];
+            if (songVersionRanking.songVersion == songButtonBeatmap.songVersionText.text){
+                // print(JsonUtility.ToJson(songVersionRanking));
+                CreateRankingUiFromSongVersionRanking(songVersionRanking);
+            }
+        }
+
+        // Last selected button beatmap. For switching between rank/beatmap.
+        instance.currentSelectedSongBeatmap = data.selectedObject;
+    }
+
+    public static void OnSongButtonSelect(BaseEventData data){
+        foreach(Transform t in instance.songButtonRankingContent){
+            Destroy(t.gameObject);
+        }
 
         RectTransform contentRt = instance.songMenuContent.GetComponent<RectTransform>();
-        SongButtonHeader songButtonHeader = data.selectedObject.GetComponent<SongButtonHeader>();
-        SongButtonBeatmap songButtonBeatmap = data.selectedObject.GetComponent<SongButtonBeatmap>();
 
         RectTransform containerRt = data.selectedObject.transform.parent.GetComponent<RectTransform>();
         RectTransform currentRt = data.selectedObject.GetComponent<RectTransform>();
@@ -216,8 +356,30 @@ public class GameManager : MonoBehaviour {
         contentRt.anchoredPosition = new Vector2(x, contentRt.anchoredPosition.y - 350f);
     }
 
+    public static void OnSongButtonRankingSelect(BaseEventData data){
+        // RectTransform contentRt = instance.songMenuContent.GetComponent<RectTransform>();
+
+        // RectTransform containerRt = data.selectedObject.transform.parent.GetComponent<RectTransform>();
+        // RectTransform currentRt = data.selectedObject.GetComponent<RectTransform>();
+
+        // float x = contentRt.anchoredPosition.x;
+        // contentRt.anchoredPosition =
+        //     (Vector2)instance.songMenuScrollRect.transform.InverseTransformPoint(contentRt.position)
+        //     - (Vector2)instance.songMenuScrollRect.transform.InverseTransformPoint(currentRt.position);
+
+        // // 350f = 100 (height of header/2) + 200 (height of header) + 50 (spacing)
+        // contentRt.anchoredPosition = new Vector2(x, contentRt.anchoredPosition.y - 350f);
+
+        // // Last selected button beatmap. For switching between rank/beatmap.
+        // if (data.selectedObject.GetComponent<SongButtonBeatmap>()){
+        //     instance.currentSelectedSong = data.selectedObject;
+        // }
+
+        instance.currentSelectedSongButtonRankingButton = data.selectedObject;
+    }
+
 	public static void LoadAllBeatmapsIntoMenu() {
-        instance.currentSelectedSong = null;
+        instance.currentSelectedSongHeader = null;
 
 		foreach(KeyValuePair<string, List<OsuParsers.Beatmaps.Beatmap>> kvp in beatmapsDictionary) {
 			string songName = kvp.Key;
@@ -228,15 +390,15 @@ public class GameManager : MonoBehaviour {
 			SongButtonHeader songButton = Instantiate(instance.songButtonPrefab, container);
 			songButton.UpdateSongButton(songName);
 
-            if (instance.currentSelectedSong == null){
-                instance.currentSelectedSong = songButton.gameObject;
+            if (instance.currentSelectedSongHeader == null){
+                instance.currentSelectedSongHeader = songButton.gameObject;
             }
 
             EventTrigger eventTrigger = (EventTrigger) songButton.gameObject.AddComponent(typeof (EventTrigger));
             EventTrigger.Entry eventTriggerEntry = new EventTrigger.Entry();
             eventTriggerEntry.eventID = EventTriggerType.Select;
             eventTriggerEntry.callback.AddListener((data) => {
-                OnSelect(data);
+                OnSongButtonSelect(data);
             });
 
             eventTrigger.triggers.Add(eventTriggerEntry);
@@ -265,7 +427,8 @@ public class GameManager : MonoBehaviour {
                 EventTrigger.Entry eventTriggerEntry2 = new EventTrigger.Entry();
                 eventTriggerEntry2.eventID = EventTriggerType.Select;
                 eventTriggerEntry2.callback.AddListener((data) => {
-                    OnSelect(data);
+                    OnSongButtonSelect(data);
+                    OnSongButtonBeatmapSelect(data);
                 });
 
                 eventTrigger2.triggers.Add(eventTriggerEntry2);
@@ -273,6 +436,7 @@ public class GameManager : MonoBehaviour {
 				// By default, the child is inactive.
 				songButtonChild.gameObject.SetActive(false);
 
+                songButtonChild.beatmapTitle = beatmap.MetadataSection.Title;
                 songButtonChild.SetBeatmapData(songName, songId);
 				songButtonChild.UpdateButton(beatmapVersion, difficulty.ToString(), beatmapMode);
 				songButton.AddSongButtonChild(songButtonChild);
@@ -281,7 +445,7 @@ public class GameManager : MonoBehaviour {
 			}
 		}
 
-        EventSystem.current.SetSelectedGameObject(instance.currentSelectedSong);
+        EventSystem.current.SetSelectedGameObject(instance.currentSelectedSongHeader);
 	}
 
     public static List<OsuParsers.Beatmaps.Beatmap> LoadBeatmapsFromFolder(string path){
@@ -396,9 +560,11 @@ public class GameManager : MonoBehaviour {
         ShowSongMenu(false);
         ShowGameMenu(true);
         currentBeatmapOszName = oszName;
+        currentBeatmapSongTitle = beatmap.MetadataSection.Title;
+        currentBeatmapSongVersion = beatmap.MetadataSection.Version;
         currentBeatmapOsuId = osuId;
-        currentSelectedSong = SongButtonHeader.GetSongButtonHeader(oszName).gameObject;
-        print(currentSelectedSong.GetComponent<SongButtonHeader>().songTitle.text);
+        currentSelectedSongHeader = SongButtonHeader.GetSongButtonHeader(oszName).gameObject;
+        print(currentSelectedSongHeader.GetComponent<SongButtonHeader>().songTitle.text);
 
         BeatmapGame.instance.StartBeatmap(beatmap);
     }
@@ -423,17 +589,23 @@ public class GameManager : MonoBehaviour {
         instance.gradeText.text = grade;
     }
 
-    public static void UpdateScoreboardText(int great, int good, int miss, int combo, float accuracy, int score){
-        instance.greatText.text = great.ToString() + "x";
-        instance.goodText.text = good.ToString() + "x";
-        instance.missText.text = miss.ToString() + "x";
-        instance.gradeComboText.text = combo.ToString() + "x";
+    public static float CalcAccuracy(float accuracy){
+        return Mathf.Floor(accuracy * 10000) / 100f;
+    }
+
+    public static void UpdateScoreboardText(SongPlayRanking ranking){
+        instance.gradeScoreText.text = ranking.score.ToString();
+
+        instance.greatText.text = ranking.beatsHit.Great.ToString() + "x";
+        instance.goodText.text = ranking.beatsHit.Good.ToString() + "x";
+        instance.missText.text = ranking.beatsHit.Miss.ToString() + "x";
+        instance.gradeComboText.text = ranking.highestCombo.ToString() + "x";
 
         // Round to 2 sig fig.
-        accuracy = Mathf.Floor(accuracy * 10000) / 100f;
+        float accuracy = CalcAccuracy(ranking.accuracy);
         instance.gradeAccuracyText.text = accuracy.ToString() + "%";
 
-        instance.gradeScoreText.text = score.ToString();
+        instance.gradeText.text = ranking.grade;
     }
 
     public static void UpdateSongProgressSliderColor(Color color){
@@ -452,6 +624,16 @@ public class GameManager : MonoBehaviour {
 
             if (Input.GetKeyDown(KeyCode.R)){
                 StartBeatmap(currentBeatmapOszName, currentBeatmapOsuId);
+            }
+        }
+
+        if (Input.GetButtonDown("Left Drum") && instance.songMenu.gameObject.activeSelf){
+            SongButtonRanking sbr = EventSystem.current.currentSelectedGameObject.GetComponent<SongButtonRanking>();
+
+            if (sbr){
+                EventSystem.current.SetSelectedGameObject(instance.currentSelectedSongBeatmap);
+            } else if (instance.currentSelectedSongButtonRankingButton) {
+                EventSystem.current.SetSelectedGameObject(instance.currentSelectedSongButtonRankingButton);
             }
         }
 

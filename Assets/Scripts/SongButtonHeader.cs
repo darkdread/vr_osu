@@ -57,7 +57,7 @@ public class SongButtonHeader : MonoBehaviour
 		}
 	}
 
-	public IEnumerator AnimateOpenList(float duration){
+	public IEnumerator AnimateOpenList(float duration, bool panToSongHeader = true){
 		float t = 0;
 
 		for(int i = 0; i < songButtonChildren.Count; i++) {

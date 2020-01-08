@@ -7,9 +7,10 @@ using UnityEngine.UI;
 public class SongButtonBeatmap : MonoBehaviour
 {
 	private Button button;
-	private string beatmapTitle;
-	private int beatmapId;
+	private string oszTitle;
+	private int oszId;
 
+	public string beatmapTitle;
 	public TMPro.TextMeshProUGUI songVersionText;
 	public TMPro.TextMeshProUGUI songDifficultyText;
 	public TMPro.TextMeshProUGUI songOriginalModeText;
@@ -19,13 +20,17 @@ public class SongButtonBeatmap : MonoBehaviour
 		button.onClick.AddListener(PlayBeatmap);
 	}
 
+	public SongButtonHeader GetSongButtonHeader(){
+		return SongButtonHeader.GetSongButtonHeader(oszTitle);
+	}
+
 	public void PlayBeatmap(){
-		GameManager.instance.StartBeatmap(beatmapTitle, beatmapId);
+		GameManager.instance.StartBeatmap(oszTitle, oszId);
 	}
 
 	public void SetBeatmapData(string oszName, int id){
-		beatmapTitle = oszName;
-		beatmapId = id;
+		oszTitle = oszName;
+		oszId = id;
 	}
 
 	public void UpdateButton(string version, string difficulty, string mode) {

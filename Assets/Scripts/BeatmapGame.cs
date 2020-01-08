@@ -24,6 +24,27 @@ public enum Drum {
     RightSide = 3
 }
 
+[System.Serializable]
+public class SongRanking {
+    public string songTitle;
+    public SongVersionRanking[] songVersionRanking;
+}
+
+[System.Serializable]
+public class SongVersionRanking {
+    public string songVersion;
+    public SongPlayRanking[] rankings;
+}
+
+[System.Serializable]
+public class SongPlayRanking {
+    public BeatsHit beatsHit;
+    public int score;
+    public int highestCombo;
+    public float accuracy;
+    public string grade;
+}
+
 public enum Score {
     Great = 300,
     Good = 100,
@@ -37,6 +58,7 @@ public class DrumTransformPair {
     public Transform drumMarkerTransform;
 }
 
+[System.Serializable]
 public struct BeatsHit {
     public int Great;
     public int Good;
@@ -76,12 +98,15 @@ public class BeatmapGame : MonoBehaviour {
 
     public float approachRate;
     public int beatmapDuration;
+    public string songTitle;
     public int songTimer;
 
     public int songStartTimer = 0;
     public int score = 0;
     public int combo = 0;
+    public int highestCombo = 0;
     public float accuracy = 1;
+    public Grade grade;
 
     public BeatsHit beatsHit;
 
@@ -159,6 +184,7 @@ public class BeatmapGame : MonoBehaviour {
             return;
         }
 
+        songTitle = beatmap.MetadataSection.Title;
         originalMode = beatmap.GeneralSection.Mode;
         hitObjects = beatmap.HitObjects;
         beatmapDuration = beatmap.HitObjects[beatmap.HitObjects.Count - 1].EndTime;
@@ -177,9 +203,10 @@ public class BeatmapGame : MonoBehaviour {
         closestBeat = 0;
         score = 0;
         combo = 0;
+        highestCombo = 0;
         accuracy = CalculateAccuracy();
 
-        GameManager.UpdateAccuracyText("100%");
+        GameManager.UpdateAccuracyText((accuracy * 100).ToString() + "%");
         GameManager.UpdateComboText(combo.ToString());
         GameManager.UpdateScoreText(score.ToString());
 
@@ -275,6 +302,11 @@ public class BeatmapGame : MonoBehaviour {
         GameManager.UpdateSongProgressSlider((float) songTimer/beatmapDuration);
 
         if (songTimer >= beatmapDuration){
+            OnSongEnd();
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Q)){
             OnSongEnd();
             return;
         }
@@ -386,6 +418,10 @@ public class BeatmapGame : MonoBehaviour {
 
         if (gain > 0){
             combo += 1;
+
+            if (highestCombo < combo){
+                highestCombo = combo;
+            }
         } else {
             combo = 0;
         }
@@ -413,6 +449,9 @@ public class BeatmapGame : MonoBehaviour {
 
     // https://osu.ppy.sh/help/wiki/Accuracy#-osu!taiko
     private float CalculateAccuracy(){
+        if (beatsHit.Great + beatsHit.Good + beatsHit.Miss == 0){
+            return 0;
+        }
         return (beatsHit.Great + 0.5f * (float) beatsHit.Good) / (beatsHit.Great + beatsHit.Good + beatsHit.Miss);
     }
 
@@ -429,6 +468,23 @@ public class BeatmapGame : MonoBehaviour {
         } else {
             return Grade.F;
         }
+    }
+
+    private string GradeToString(Grade grade){
+        switch(grade){
+            case Grade.SS:
+                return "SS";
+            case Grade.S:
+                return "S";
+            case Grade.A:
+                return "A";
+            case Grade.B:
+                return "B";
+            case Grade.F:
+                return "F";
+        }
+
+        return null;
     }
 
     // https://osu.ppy.sh/help/wiki/Beatmap_Editor/Song_Setup#approach-rate
@@ -616,28 +672,25 @@ public class BeatmapGame : MonoBehaviour {
         }
     }
 
+    private SongPlayRanking BuildRankObject(){
+        SongPlayRanking ranking = new SongPlayRanking(){
+            highestCombo = highestCombo,
+            score = score,
+            accuracy = accuracy,
+            grade = GradeToString(grade),
+            beatsHit = beatsHit
+        };
+
+        return ranking;
+    }
+
     public void OnSongEnd(){
         print("OnSongEnd");
-        Grade grade = CalculateGrade();
-        switch(grade){
-            case Grade.SS:
-                GameManager.UpdateGradeText("SS");
-                break;
-            case Grade.S:
-                GameManager.UpdateGradeText("S");
-                break;
-            case Grade.A:
-                GameManager.UpdateGradeText("A");
-                break;
-            case Grade.B:
-                GameManager.UpdateGradeText("B");
-                break;
-            case Grade.F:
-                GameManager.UpdateGradeText("F");
-                break;
-        }
+        grade = CalculateGrade();
 
-        GameManager.UpdateScoreboardText(beatsHit.Great, beatsHit.Good, beatsHit.Miss, combo, accuracy, score);
+        SongPlayRanking ranking = BuildRankObject();
+        GameManager.SaveScore(ranking);
+        GameManager.UpdateScoreboardText(ranking);
 
         GameManager.Stop();
         GameManager.ShowGameMenu(false);
