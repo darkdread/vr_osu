@@ -28,7 +28,7 @@ public class GameManager : MonoBehaviour {
     public static string currentBeatmapSongTitle;
     public static string currentBeatmapSongVersion;
     public static int currentBeatmapOsuId;
-    public static bool production = false;
+    public static bool production = true;
 
     private static SongVersionRanking currentSongVersionRanking;
 
@@ -84,6 +84,10 @@ public class GameManager : MonoBehaviour {
         if (instance == null){
             instance = this;
 
+            #if UNITY_EDITOR
+                production = false;
+            #endif
+
             SetQuality();
             gradeBackButton.onClick.AddListener(delegate{
                 ShowGradeMenu(false);
@@ -97,7 +101,12 @@ public class GameManager : MonoBehaviour {
             if (production){
                 beatmapRepositoryPath = Path.Combine(Application.persistentDataPath, beatmapRepositoryPath);
                 beatmapExtractedPath = Path.Combine(Application.persistentDataPath, beatmapExtractedPath);
+                beatmapRankingPath = Path.Combine(Application.persistentDataPath, beatmapRankingPath);
             }
+
+            print(new DirectoryInfo(beatmapExtractedPath).FullName);
+            print(new DirectoryInfo(beatmapRepositoryPath).FullName);
+            print(new DirectoryInfo(beatmapRankingPath).FullName);
 
             DirectoryInfo tempInfo = new DirectoryInfo(beatmapExtractedPath);
 
@@ -236,7 +245,10 @@ public class GameManager : MonoBehaviour {
 
     public static void ShowGradeMenu(bool show){
         instance.gradeMenu.gameObject.SetActive(show);
-        EventSystem.current.SetSelectedGameObject(instance.gradeBackButton.gameObject);
+
+        if (show){
+            EventSystem.current.SetSelectedGameObject(instance.gradeBackButton.gameObject);
+        }
     }
 
     public static void ShowSongMenu(bool show, bool selectSong = true){
@@ -445,7 +457,10 @@ public class GameManager : MonoBehaviour {
 			}
 		}
 
+        print(instance.currentSelectedSongHeader);
+        print(EventSystem.current);
         EventSystem.current.SetSelectedGameObject(instance.currentSelectedSongHeader);
+        print(EventSystem.current);
 	}
 
     public static List<OsuParsers.Beatmaps.Beatmap> LoadBeatmapsFromFolder(string path){
