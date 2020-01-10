@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 static class ButtonsMapping {
     public static string LeftDrum = "Left Drum";
@@ -83,13 +84,20 @@ public class BeatmapGame : MonoBehaviour {
     public List<OsuParsers.Beatmaps.Objects.HitObject> hitObjects = new List<OsuParsers.Beatmaps.Objects.HitObject>();
     public List<Beat> beats = new List<Beat>();
 
+    [Header("Setup")]
     public List<DrumTransformPair> drumTransformPairs = new List<DrumTransformPair>();
     public Light gameLight;
     public Beat beatPrefab;
     public Transform beatHolder;
     public Transform lineIndicatorHolder;
     public GameObject lineIndicator;
+    public Transform hitTextHolder;
+    public GameObject hitTextPrefab;
     public AudioClip drumSfx;
+
+    [Header("Options")]
+    public bool autoHitGood = false;
+    public bool autoHitGreat = false;
 
     public int beatHitGreatMs = 30;
     public int beatHitGoodMs = 50;
@@ -107,7 +115,6 @@ public class BeatmapGame : MonoBehaviour {
     public int highestCombo = 0;
     public float accuracy = 1;
     public Grade grade;
-
     public BeatsHit beatsHit;
 
     // Time it takes for beatmap to end after last beat.
@@ -341,11 +348,14 @@ public class BeatmapGame : MonoBehaviour {
 
             // Miss.
             if (beat.offset + beatHitGoodMs < songTimer){
-                ScoreBeat(beat, Drum.Left);
+                ScoreBeat(beat, ColorToDrum(beat.color));
             }
 
-            // Good Hit.
-            if (DEBUG_MODE && beat.offset - beatHitGoodMs <= songTimer){
+            if (autoHitGood && beat.offset - beatHitGoodMs <= songTimer){
+                HitDrum(ColorToDrum(beat.color));
+            }
+
+            if (autoHitGreat && beat.offset - beatHitGreatMs <= songTimer){
                 HitDrum(ColorToDrum(beat.color));
             }
 
@@ -442,6 +452,8 @@ public class BeatmapGame : MonoBehaviour {
 
         accuracy = CalculateAccuracy();
 
+        SpawnHitText(beat.transform.position, gainedScore.ToString());
+
         GameManager.UpdateAccuracyText((accuracy * 100).ToString() + "%");
         GameManager.UpdateScoreText(score.ToString());
         GameManager.UpdateComboText(combo.ToString());
@@ -519,6 +531,16 @@ public class BeatmapGame : MonoBehaviour {
         }
     }
 
+    private void SpawnHitText(Vector3 position, string text){
+        TextMeshProUGUI hitText = Instantiate(hitTextPrefab, hitTextHolder).GetComponent<TextMeshProUGUI>();
+        hitText.text = text;
+
+        Vector3 offset = Vector3.up * 1f;
+        hitText.transform.position = position;
+
+        Destroy(hitText.gameObject, 2f);
+    }
+
     public void HitDrum(Drum drum){
         // Get closest beat within song timer.
         Beat beat = GetClosestBeat();
@@ -535,8 +557,10 @@ public class BeatmapGame : MonoBehaviour {
                 return;
             }
 
+            DrumTransformPair drumTransformPair = GetDrumMarkerTransformPair(drum);
+
             StartCoroutine(LongVibration(0.1f, 1f));
-            StartCoroutine(SetMaterialEmissionColor(GetDrumMarkerTransformPair(drum).drumTransform.GetComponent<MeshRenderer>().material, Color.white));
+            StartCoroutine(SetMaterialEmissionColor(drumTransformPair.drumTransform.GetComponent<MeshRenderer>().material, Color.white));
 
             sfxSource.PlayOneShot(drumSfx);
             ScoreBeat(beat, drum);
