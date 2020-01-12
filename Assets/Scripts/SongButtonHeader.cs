@@ -15,6 +15,9 @@ public class SongButtonHeader : MonoBehaviour
 	private float originalHeight;
 	public float songButtonBeatmapHeight;
 
+	public OsuParsers.Beatmaps.Beatmap songBeatmap;
+	public string songOszName;
+
 	public Text songTitle;
 	public List<SongButtonBeatmap> songButtonChildren;
 	public bool isListOpen = false;
@@ -37,7 +40,10 @@ public class SongButtonHeader : MonoBehaviour
 		originalHeight = GetComponent<RectTransform>().rect.height;
 		songButtons.Add(this);
 
-		button.onClick.AddListener(ToggleList);
+		button.onClick.AddListener(delegate{
+			ToggleList();
+			PreviewSong();
+		});
 	}
 
 	public void UpdateSongButton(string title) {
@@ -116,6 +122,17 @@ public class SongButtonHeader : MonoBehaviour
 				songButton.HideList();
 			}
 		}
+	}
+
+	public void PreviewSong() {
+		// Read from Resources folder.
+        AudioClip clip = GameManager.GetBeatmapAudioClip(songBeatmap, songOszName);
+		GameManager.PreviewSong(clip);
+	}
+
+	public void UpdateSongBeatmap(OsuParsers.Beatmaps.Beatmap beatmap, string oszName){
+		songBeatmap = beatmap;
+		songOszName = oszName;
 	}
 
 	public static void HideAllList(){

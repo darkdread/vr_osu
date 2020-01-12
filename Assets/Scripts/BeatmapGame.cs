@@ -182,6 +182,8 @@ public class BeatmapGame : MonoBehaviour {
     }
 
     public void StartBeatmap(OsuParsers.Beatmaps.Beatmap beatmap){
+        GameManager.StopPreview();
+
         print(string.Format("Starting beatmap: {0} {1}", beatmap.GeneralSection.AudioFilename, beatmap.MetadataSection.Version));
         
         // Check if it's osu!mania. If it is, prevent it from loading, because osu!mania has
@@ -235,7 +237,7 @@ public class BeatmapGame : MonoBehaviour {
         }
 
         // Read from Resources folder.
-        AudioClip clip = GameManager.GetBeatmapAudioClip(beatmap);
+        AudioClip clip = GameManager.GetBeatmapAudioClip(beatmap, GameManager.currentBeatmapOszName);
         PlayBeatmapSong(clip);
 
         // Read mp3 file from local disk and convert byte to PCM. Look at MP3Sharp.

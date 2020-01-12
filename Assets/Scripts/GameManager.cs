@@ -54,6 +54,7 @@ public class GameManager : MonoBehaviour {
     public GameObject currentSelectedSongHeader;
     public GameObject currentSelectedSongBeatmap;
     public GameObject currentSelectedSongButtonRankingButton;
+    public AudioSource previewAudioSource;
 
     [Header("Song Grade UI")]
     public Transform gradeMenu;
@@ -79,8 +80,21 @@ public class GameManager : MonoBehaviour {
 
         RenderSettings.skybox = skyboxMaterial;
     }
+
+    public static void PreviewSong(AudioClip clip){
+        if (clip == instance.previewAudioSource.clip){
+            return;
+        }
+
+        instance.previewAudioSource.clip = clip;
+		instance.previewAudioSource.Play();
+    }
+
+    public static void StopPreview(){
+        instance.previewAudioSource.Stop();
+    }
     
-    void Awake(){
+    private void Awake(){
         if (instance == null){
             instance = this;
 
@@ -174,6 +188,7 @@ public class GameManager : MonoBehaviour {
 			// StartBeatmap("109852 Foster The People - Pumped Up Kicks.osz", 1);
 
 			LoadAllBeatmapsIntoMenu();
+            PreloadAllBeatmapSong();
             //StartBeatmap("30768 Joe Inoue - CLOSER (TV Size).osz", 5);
 
 		} else {
@@ -390,6 +405,15 @@ public class GameManager : MonoBehaviour {
         instance.currentSelectedSongButtonRankingButton = data.selectedObject;
     }
 
+    public static void PreloadAllBeatmapSong() {
+
+		foreach(KeyValuePair<string, List<OsuParsers.Beatmaps.Beatmap>> kvp in beatmapsDictionary) {
+			string songName = kvp.Key;
+
+            GetBeatmapAudioClip(kvp.Value[0], songName);
+		}
+	}
+
 	public static void LoadAllBeatmapsIntoMenu() {
         instance.currentSelectedSongHeader = null;
 
@@ -401,6 +425,7 @@ public class GameManager : MonoBehaviour {
 			// Create main song button containing all difficulties.
 			SongButtonHeader songButton = Instantiate(instance.songButtonPrefab, container);
 			songButton.UpdateSongButton(songName);
+            songButton.UpdateSongBeatmap(kvp.Value[0], songName);
 
             if (instance.currentSelectedSongHeader == null){
                 instance.currentSelectedSongHeader = songButton.gameObject;
@@ -478,8 +503,8 @@ public class GameManager : MonoBehaviour {
         return beatmaps;
     }
 
-    public static AudioClip GetBeatmapAudioClip(OsuParsers.Beatmaps.Beatmap beatmap){
-        DirectoryInfo info = new DirectoryInfo(Path.Combine(beatmapExtractedPath, currentBeatmapOszName));
+    public static AudioClip GetBeatmapAudioClip(OsuParsers.Beatmaps.Beatmap beatmap, string oszName){
+        DirectoryInfo info = new DirectoryInfo(Path.Combine(beatmapExtractedPath, oszName));
         FileInfo audioFile = info.GetFiles(beatmap.GeneralSection.AudioFilename)[0];
 
         // C:\Users\Rey\Desktop\vr_osu\Assets\Resources\Beatmaps\Temp\30768 Joe Inoue - CLOSER (TV Size).osz\CLOSE BONUS.mp3
@@ -491,7 +516,6 @@ public class GameManager : MonoBehaviour {
         print("file://" + path);
 
         AudioClip clip = Resources.Load<AudioClip>(path);
-        print(clip);
         return clip;
     }
 
