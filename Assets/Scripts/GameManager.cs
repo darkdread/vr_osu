@@ -33,6 +33,7 @@ public class GameManager : MonoBehaviour {
     private static SongVersionRanking currentSongVersionRanking;
 
     private static Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>> beatmapsDictionary = new Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>>();
+    private static Dictionary<string, AudioClip> beatmapsAudioClipDictionary = new Dictionary<string, AudioClip>();
 
     [Header("Game UI")]
     public Transform gameMenu;
@@ -92,6 +93,7 @@ public class GameManager : MonoBehaviour {
 
     public static void StopPreview(){
         instance.previewAudioSource.Stop();
+        instance.previewAudioSource.clip = null;
     }
     
     private void Awake(){
@@ -408,9 +410,10 @@ public class GameManager : MonoBehaviour {
     public static void PreloadAllBeatmapSong() {
 
 		foreach(KeyValuePair<string, List<OsuParsers.Beatmaps.Beatmap>> kvp in beatmapsDictionary) {
-			string songName = kvp.Key;
+			string oszName = kvp.Key;
 
-            GetBeatmapAudioClip(kvp.Value[0], songName);
+            AudioClip clip = GetBeatmapAudioClip(kvp.Value[0], oszName);
+            beatmapsAudioClipDictionary.Add(oszName, clip);
 		}
 	}
 
@@ -418,14 +421,14 @@ public class GameManager : MonoBehaviour {
         instance.currentSelectedSongHeader = null;
 
 		foreach(KeyValuePair<string, List<OsuParsers.Beatmaps.Beatmap>> kvp in beatmapsDictionary) {
-			string songName = kvp.Key;
+			string oszName = kvp.Key;
 
             Transform container = Instantiate(instance.songButtonContainerPrefab, instance.songMenuContent).transform;
 
 			// Create main song button containing all difficulties.
 			SongButtonHeader songButton = Instantiate(instance.songButtonPrefab, container);
-			songButton.UpdateSongButton(songName);
-            songButton.UpdateSongBeatmap(kvp.Value[0], songName);
+			songButton.UpdateSongButton(oszName);
+            songButton.UpdateSongBeatmap(kvp.Value[0], oszName);
 
             if (instance.currentSelectedSongHeader == null){
                 instance.currentSelectedSongHeader = songButton.gameObject;
@@ -453,7 +456,7 @@ public class GameManager : MonoBehaviour {
 				float difficulty = beatmap.DifficultySection.ApproachRate;
 
                 if (beatmap.GeneralSection.Mode == OsuParsers.Enums.Ruleset.Mania){
-                    print(string.Format("Skipping parsing of: Osz: {0}, version: {1}, mode: {2}", songName, beatmapVersion, beatmap.GeneralSection.Mode));
+                    print(string.Format("Skipping parsing of: Osz: {0}, version: {1}, mode: {2}", oszName, beatmapVersion, beatmap.GeneralSection.Mode));
                     songId += 1;
                     continue;
                 }
@@ -474,7 +477,7 @@ public class GameManager : MonoBehaviour {
 				songButtonChild.gameObject.SetActive(false);
 
                 songButtonChild.beatmapTitle = beatmap.MetadataSection.Title;
-                songButtonChild.SetBeatmapData(songName, songId);
+                songButtonChild.SetBeatmapData(oszName, songId);
 				songButtonChild.UpdateButton(beatmapVersion, difficulty.ToString(), beatmapMode);
 				songButton.AddSongButtonChild(songButtonChild);
 
@@ -504,6 +507,10 @@ public class GameManager : MonoBehaviour {
     }
 
     public static AudioClip GetBeatmapAudioClip(OsuParsers.Beatmaps.Beatmap beatmap, string oszName){
+        if (beatmapsAudioClipDictionary.ContainsKey(oszName) && beatmapsAudioClipDictionary[oszName] is AudioClip){
+            return beatmapsAudioClipDictionary[oszName];
+        }
+
         DirectoryInfo info = new DirectoryInfo(Path.Combine(beatmapExtractedPath, oszName));
         FileInfo audioFile = info.GetFiles(beatmap.GeneralSection.AudioFilename)[0];
 
