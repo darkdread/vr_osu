@@ -57,6 +57,12 @@ public class GameManager : MonoBehaviour {
     public GameObject currentSelectedSongButtonRankingButton;
     public AudioSource previewAudioSource;
 
+    [Header("Song Menu Pause UI")]
+    public Transform songMenuPauseMenu;
+    public Button songMenuContinueButton;
+    public Button songMenuRetryButton;
+    public Button songMenuMainMenuButton;
+
     [Header("Song Grade UI")]
     public Transform gradeMenu;
     public TMPro.TextMeshProUGUI gradeText;
@@ -111,8 +117,23 @@ public class GameManager : MonoBehaviour {
             });
 
             ShowSongMenu(true);
+            ShowPauseMenu(false);
             ShowGameMenu(false);
             ShowGradeMenu(false);
+
+            songMenuContinueButton.onClick.AddListener(delegate{
+                Pause(false);
+            });
+
+            songMenuRetryButton.onClick.AddListener(delegate{
+                Pause(false);
+                StartBeatmap(currentBeatmapOszName, currentBeatmapOsuId);
+            });
+
+            songMenuMainMenuButton.onClick.AddListener(delegate{
+                Pause(false);
+                ShowSongMenu(true);
+            });
 
             if (production){
                 beatmapRepositoryPath = Path.Combine(Application.persistentDataPath, beatmapRepositoryPath);
@@ -294,6 +315,15 @@ public class GameManager : MonoBehaviour {
         }
     }
 
+    public static void ShowPauseMenu(bool show){
+        instance.songMenuPauseMenu.gameObject.SetActive(show);
+
+        if (show){
+            EventSystem.current.SetSelectedGameObject(null);
+            EventSystem.current.SetSelectedGameObject(instance.songMenuContinueButton.gameObject);
+        }
+    }
+
     public static void CreateRankingUiFromSongVersionRanking(SongVersionRanking songVersionRanking){
         print("CreateRankingUiFromSongVersionRanking()");
 
@@ -386,24 +416,6 @@ public class GameManager : MonoBehaviour {
     }
 
     public static void OnSongButtonRankingSelect(BaseEventData data){
-        // RectTransform contentRt = instance.songMenuContent.GetComponent<RectTransform>();
-
-        // RectTransform containerRt = data.selectedObject.transform.parent.GetComponent<RectTransform>();
-        // RectTransform currentRt = data.selectedObject.GetComponent<RectTransform>();
-
-        // float x = contentRt.anchoredPosition.x;
-        // contentRt.anchoredPosition =
-        //     (Vector2)instance.songMenuScrollRect.transform.InverseTransformPoint(contentRt.position)
-        //     - (Vector2)instance.songMenuScrollRect.transform.InverseTransformPoint(currentRt.position);
-
-        // // 350f = 100 (height of header/2) + 200 (height of header) + 50 (spacing)
-        // contentRt.anchoredPosition = new Vector2(x, contentRt.anchoredPosition.y - 350f);
-
-        // // Last selected button beatmap. For switching between rank/beatmap.
-        // if (data.selectedObject.GetComponent<SongButtonBeatmap>()){
-        //     instance.currentSelectedSong = data.selectedObject;
-        // }
-
         instance.currentSelectedSongButtonRankingButton = data.selectedObject;
     }
 
@@ -620,15 +632,15 @@ public class GameManager : MonoBehaviour {
     }
 
     public static void UpdateScoreText(string score){
-        instance.scoreText.text = "Score: " + score.PadLeft(9, '0');
+        instance.scoreText.text = "Score: " + score.PadLeft(10, '0');
     }
 
     public static void UpdateComboText(string combo){
-        instance.comboText.text = "Combo: " + combo;
+        instance.comboText.text = $"Combo: {combo}x";
     }
 
     public static void UpdateAccuracyText(string accuracy){
-        instance.accuracyText.text = "Accuracy: " + accuracy;
+        instance.accuracyText.text = $"Accuracy: {accuracy}";
     }
 
     public static void UpdateGradeText(string grade){
@@ -640,7 +652,7 @@ public class GameManager : MonoBehaviour {
     }
 
     public static void UpdateScoreboardText(SongPlayRanking ranking){
-        instance.gradeScoreText.text = ranking.score.ToString();
+        instance.gradeScoreText.text = ranking.score.ToString().PadLeft(10, '0');
 
         instance.greatText.text = ranking.beatsHit.Great.ToString() + "x";
         instance.goodText.text = ranking.beatsHit.Good.ToString() + "x";
@@ -703,11 +715,11 @@ public class GameManager : MonoBehaviour {
 
         if ((gameState & GameState.Paused) == GameState.Paused){
             print("Paused");
-            ShowSongMenu(true);
+            ShowPauseMenu(true);
             BeatmapGame.instance.musicSource.Pause();
         } else {
             print("Resumed");
-            ShowSongMenu(false);
+            ShowPauseMenu(false);
             BeatmapGame.instance.musicSource.UnPause();
         }
     }

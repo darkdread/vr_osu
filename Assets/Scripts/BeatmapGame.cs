@@ -98,6 +98,7 @@ public class BeatmapGame : MonoBehaviour {
     [Header("Options")]
     public bool autoHitGood = false;
     public bool autoHitGreat = false;
+    public bool autoHitPerfect = false;
 
     public int beatHitGreatMs = 30;
     public int beatHitGoodMs = 50;
@@ -161,12 +162,16 @@ public class BeatmapGame : MonoBehaviour {
 
         // beatTransform.position = GetDrumMarkerTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
 
+        GameObject linePerfect = Instantiate(lineIndicator, lineIndicatorHolder);
+        linePerfect.transform.position += Vector3.forward * (((float) 0 / 1000) * beatSpeed);
+        linePerfect.name = "LinePerfectIndicator";
+
         GameObject lineGreat = Instantiate(lineIndicator, lineIndicatorHolder);
-        lineGreat.transform.localPosition += -Vector3.forward + Vector3.forward * (((float) beatHitGreatMs / 200) * beatSpeed);
+        lineGreat.transform.position += Vector3.forward * (((float) beatHitGreatMs / 1000) * beatSpeed);
         lineGreat.name = "LineGreatIndicator";
 
         GameObject lineGood = Instantiate(lineIndicator, lineIndicatorHolder);
-        lineGood.transform.localPosition += -Vector3.forward + Vector3.forward * (((float) beatHitGoodMs / 200) * beatSpeed);
+        lineGood.transform.position += Vector3.forward * (((float) beatHitGoodMs / 1000) * beatSpeed);
         lineGood.name = "LineGoodIndicator";
     }
 
@@ -362,7 +367,7 @@ public class BeatmapGame : MonoBehaviour {
             }
 
             // Perfect time formula: beat.hitObject.StartTime + beat.delay <= songTimer
-            if (DEBUG_MODE && beat.offset <= songTimer){
+            if (autoHitPerfect && beat.offset <= songTimer){
                 HitDrum(ColorToDrum(beat.color));
             }
         }
