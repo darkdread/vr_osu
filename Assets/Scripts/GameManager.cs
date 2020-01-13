@@ -35,6 +35,8 @@ public class GameManager : MonoBehaviour {
     private static Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>> beatmapsDictionary = new Dictionary<string, List<OsuParsers.Beatmaps.Beatmap>>();
     private static Dictionary<string, AudioClip> beatmapsAudioClipDictionary = new Dictionary<string, AudioClip>();
 
+    private GameObject lastSelectedGameObject;
+
     [Header("Game UI")]
     public Transform gameMenu;
     public Text scoreText;
@@ -60,9 +62,16 @@ public class GameManager : MonoBehaviour {
 
     [Header("Song Menu Pause UI")]
     public Transform songMenuPauseMenu;
-    public Button songMenuContinueButton;
-    public Button songMenuRetryButton;
-    public Button songMenuMainMenuButton;
+    public Button songMenuPauseContinueButton;
+    public Button songMenuPauseRetryButton;
+    public Button songMenuPauseOptionsButton;
+    public Button songMenuPauseMainMenuButton;
+
+    [Header("Song Menu Options UI")]
+    public Transform songMenuOptionsMenu;
+    public Slider songMenuOptionsSfxSlider;
+    public Slider songMenuOptionsMusicSlider;
+    public Button songMenuOptionsBackButton;
 
     [Header("Song Grade UI")]
     public Transform gradeMenu;
@@ -95,6 +104,7 @@ public class GameManager : MonoBehaviour {
             return;
         }
 
+        BeatmapGame.instance.musicSource.Stop();
         instance.previewAudioSource.clip = clip;
 		instance.previewAudioSource.Play();
     }
@@ -102,6 +112,19 @@ public class GameManager : MonoBehaviour {
     public static void StopPreview(){
         instance.previewAudioSource.Stop();
         instance.previewAudioSource.clip = null;
+    }
+
+    public static void UpdateMusicVolume(float volume){
+        BeatmapGame.instance.musicSource.volume = volume;
+        instance.previewAudioSource.volume = volume;
+
+        PlayerPrefs.SetFloat("musicVolume", volume);
+    }
+
+    public static void UpdateSfxVolume(float volume){
+        BeatmapGame.instance.sfxSource.volume = volume;
+
+        PlayerPrefs.SetFloat("sfxVolume", volume);
     }
     
     private void Awake(){
@@ -112,33 +135,63 @@ public class GameManager : MonoBehaviour {
                 production = false;
             #endif
 
+            // Initialize start of game.
             SetQuality();
+
+            ShowSongMenu(true);
+            ShowPauseMenu(false);
+            ShowOptionsMenu(false);
+            ShowGameMenu(false);
+            ShowGradeMenu(false);
+
+            // Ranking menu.
             gradeBackButton.onClick.AddListener(delegate{
                 ShowGradeMenu(false);
                 ShowSongMenu(true, !backToSelectRank);
             });
 
-            ShowSongMenu(true);
-            ShowPauseMenu(false);
-            ShowGameMenu(false);
-            ShowGradeMenu(false);
-
-            songMenuContinueButton.onClick.AddListener(delegate{
+            // Game Pause Menu.
+            songMenuPauseContinueButton.onClick.AddListener(delegate{
                 Pause(false);
             });
 
-            songMenuRetryButton.onClick.AddListener(delegate{
+            songMenuPauseRetryButton.onClick.AddListener(delegate{
                 Pause(false);
                 StartBeatmap(currentBeatmapOszName, currentBeatmapOsuId);
             });
 
-            songMenuMainMenuButton.onClick.AddListener(delegate{
+            songMenuPauseOptionsButton.onClick.AddListener(delegate{
+                ShowPauseMenu(false);
+                ShowOptionsMenu(true);
+            });
+
+            songMenuPauseMainMenuButton.onClick.AddListener(delegate{
                 Pause(false);
                 Stop();
+                PreviewSong(GetBeatmapAudioClip(currentSelectedSongHeader.GetComponent<SongButtonHeader>().songBeatmap, currentBeatmapOszName));
                 ShowGameMenu(false);
                 ShowSongMenu(true);
             });
 
+            // Game Options Menu.
+            songMenuOptionsBackButton.onClick.AddListener(delegate{
+                ShowOptionsMenu(false);
+                ShowPauseMenu(true);
+            });
+
+            songMenuOptionsMusicSlider.onValueChanged.AddListener(delegate{
+                UpdateMusicVolume(songMenuOptionsMusicSlider.value);
+            });
+
+            songMenuOptionsSfxSlider.onValueChanged.AddListener(delegate{
+                UpdateSfxVolume(songMenuOptionsSfxSlider.value);
+            });
+
+            // Player prefs.
+            songMenuOptionsMusicSlider.value = PlayerPrefs.GetFloat("musicVolume", 1f);
+            songMenuOptionsSfxSlider.value = PlayerPrefs.GetFloat("sfxVolume", 1f);
+
+            // For all builds other than UNITY_EDITOR. Modifies path to get files.
             if (production){
                 beatmapRepositoryPath = Path.Combine(Application.persistentDataPath, beatmapRepositoryPath);
                 beatmapExtractedPath = Path.Combine(Application.persistentDataPath, beatmapExtractedPath);
@@ -171,6 +224,8 @@ public class GameManager : MonoBehaviour {
             foreach(FileInfo oszFile in fileInfo){
                 ZipArchive zipArchive = ZipFile.OpenRead(oszFile.FullName);
                 List<OsuParsers.Beatmaps.Beatmap> beatmaps = new List<OsuParsers.Beatmaps.Beatmap>();
+
+                // Create a dictionary containing all oszFileName and their respective beatmaps.
                 beatmapsDictionary.Add(oszFile.Name, beatmaps);
 
                 // Create folder for osz. Skip adding osz if directory already exist.
@@ -179,6 +234,7 @@ public class GameManager : MonoBehaviour {
                 if (!oszDirectory.Exists){
                     oszDirectory.Create();
                 } else {
+                    // Load beatmaps from folder since it exist already.
                     beatmaps = LoadBeatmapsFromFolder(oszDirectory.FullName);
                     beatmapsDictionary[oszFile.Name] = beatmaps;
                     continue;
@@ -227,25 +283,26 @@ public class GameManager : MonoBehaviour {
         instance.gameMenu.gameObject.SetActive(show);
     }
 
-    private static SongVersionRanking GetSongDataRanking(SongRanking sr, string version){
-        for(int j = 0; j < sr.songVersionRanking.Length; j++){
-            SongVersionRanking sdr = sr.songVersionRanking[j];
+    private static SongVersionRanking GetSongVersionRanking(SongRanking sr, string version){
+        for(int j = 0; j < sr.songVersionRankings.Length; j++){
+            SongVersionRanking sdr = sr.songVersionRankings[j];
 
             if (sdr.songVersion == version){
                 return sdr;
             }
         }
 
-        SongVersionRanking songDataRanking = new SongVersionRanking(){
+        SongVersionRanking songVersionRanking = new SongVersionRanking(){
             songVersion = version,
-            rankings = new SongPlayRanking[0]
+            songPlayRankings = new SongPlayRanking[0]
         };
 
-        sr.songVersionRanking = sr.songVersionRanking.Append(songDataRanking).ToArray();
-        return songDataRanking;
+        sr.songVersionRankings = sr.songVersionRankings.Append(songVersionRanking).ToArray();
+        return songVersionRanking;
     }
 
     public static SongRanking LoadScore(string songTitle){
+        // If file exist, load as string and return as SongRanking. We assume the file is in proper-json format.
         if (File.Exists(Path.Combine(beatmapRankingPath, $"{songTitle}.json"))){
             string jsonString = File.ReadAllText(Path.Combine(beatmapRankingPath, $"{songTitle}.json"));
 
@@ -261,16 +318,12 @@ public class GameManager : MonoBehaviour {
         if (sr == null){
             sr = new SongRanking(){
                 songTitle = currentBeatmapSongTitle,
-                songVersionRanking = new SongVersionRanking[0]
+                songVersionRankings = new SongVersionRanking[0]
             };
         }
 
-        // Append to songRankings if title doesn't exist.
-        // SongRanking sr = GetSongRanking(currentBeatmapSongTitle);
-
-        // Append to sr.songDataRanking if version doesn't exist.
-        SongVersionRanking sdr = GetSongDataRanking(sr, currentBeatmapSongVersion);
-        sdr.rankings = sdr.rankings.Append(ranking).ToArray();
+        SongVersionRanking sdr = GetSongVersionRanking(sr, currentBeatmapSongVersion);
+        sdr.songPlayRankings = sdr.songPlayRankings.Append(ranking).ToArray();
 
         string myJson = JsonUtility.ToJson(sr);
 
@@ -306,13 +359,17 @@ public class GameManager : MonoBehaviour {
         if (!show) {
             SongButtonHeader.HideAllList();
         } else {
+            // Select song header in song menu.
             if (selectSong && instance.currentSelectedSongHeader){
                 EventSystem.current.SetSelectedGameObject(null);
                 EventSystem.current.SetSelectedGameObject(instance.currentSelectedSongHeader);
             } else {
+                // If song ranking button was selected, select it again.
                 if (instance.currentSelectedSongButtonRankingButton){
                     SongButtonBeatmap isBeatmap = instance.currentSelectedSongBeatmap.GetComponent<SongButtonBeatmap>();
 
+                    // Since we are selecting the song ranking button, we need to toggle
+                    // open the menu of the selected song header.
                     if (isBeatmap){
                         instance.StartCoroutine(isBeatmap.GetSongButtonHeader().AnimateOpenList(0f));
                     }
@@ -320,6 +377,7 @@ public class GameManager : MonoBehaviour {
                     EventSystem.current.SetSelectedGameObject(null);
                     EventSystem.current.SetSelectedGameObject(instance.currentSelectedSongButtonRankingButton);
                     
+                    // State for grade menu back button to return to ranking button. (This current logic)
                     backToSelectRank = false;
                 }
             }
@@ -331,7 +389,16 @@ public class GameManager : MonoBehaviour {
 
         if (show){
             EventSystem.current.SetSelectedGameObject(null);
-            EventSystem.current.SetSelectedGameObject(instance.songMenuContinueButton.gameObject);
+            EventSystem.current.SetSelectedGameObject(instance.songMenuPauseContinueButton.gameObject);
+        }
+    }
+
+    public static void ShowOptionsMenu(bool show){
+        instance.songMenuOptionsMenu.gameObject.SetActive(show);
+
+        if (show){
+            EventSystem.current.SetSelectedGameObject(null);
+            EventSystem.current.SetSelectedGameObject(instance.songMenuOptionsMusicSlider.gameObject);
         }
     }
 
@@ -342,10 +409,10 @@ public class GameManager : MonoBehaviour {
 
         List<Button> buttons = new List<Button>();
 
-        songVersionRanking.rankings = songVersionRanking.rankings.OrderByDescending(songPlayRanking => songPlayRanking.score).ToArray();
+        songVersionRanking.songPlayRankings = songVersionRanking.songPlayRankings.OrderByDescending(songPlayRanking => songPlayRanking.score).ToArray();
 
-        for(int i = 0; i < songVersionRanking.rankings.Length; i++){
-            SongPlayRanking songPlayRanking = songVersionRanking.rankings[i];
+        for(int i = 0; i < songVersionRanking.songPlayRankings.Length; i++){
+            SongPlayRanking songPlayRanking = songVersionRanking.songPlayRankings[i];
             SongButtonRanking songButtonRanking = Instantiate(instance.songButtonRankingPrefab, instance.songButtonRankingContent);
 
             if (i == 0){
@@ -365,7 +432,7 @@ public class GameManager : MonoBehaviour {
             buttons.Add(songButtonRanking.GetComponent<Button>());
         }
 
-        for(int i = 0; i < songVersionRanking.rankings.Length; i++){
+        for(int i = 0; i < songVersionRanking.songPlayRankings.Length; i++){
             Button b = buttons[i];
             Navigation n = b.navigation;
 
@@ -395,8 +462,8 @@ public class GameManager : MonoBehaviour {
             return;
         }
 
-        for(int i = 0; i < songRanking.songVersionRanking.Length; i++){
-            SongVersionRanking songVersionRanking = songRanking.songVersionRanking[i];
+        for(int i = 0; i < songRanking.songVersionRankings.Length; i++){
+            SongVersionRanking songVersionRanking = songRanking.songVersionRankings[i];
             if (songVersionRanking.songVersion == songButtonBeatmap.songVersionText.text){
                 // print(JsonUtility.ToJson(songVersionRanking));
                 CreateRankingUiFromSongVersionRanking(songVersionRanking);
@@ -443,6 +510,7 @@ public class GameManager : MonoBehaviour {
 	public static void LoadAllBeatmapsIntoMenu() {
         instance.currentSelectedSongHeader = null;
 
+        // Load all beatmaps in dictionary into buttons for song menu.
 		foreach(KeyValuePair<string, List<OsuParsers.Beatmaps.Beatmap>> kvp in beatmapsDictionary) {
 			string oszName = kvp.Key;
 
@@ -457,6 +525,7 @@ public class GameManager : MonoBehaviour {
                 instance.currentSelectedSongHeader = songButton.gameObject;
             }
 
+            // Event trigger to enable auto-height panning on select.
             EventTrigger eventTrigger = (EventTrigger) songButton.gameObject.AddComponent(typeof (EventTrigger));
             EventTrigger.Entry eventTriggerEntry = new EventTrigger.Entry();
             eventTriggerEntry.eventID = EventTriggerType.Select;
@@ -486,6 +555,7 @@ public class GameManager : MonoBehaviour {
 
 				SongButtonBeatmap songButtonChild = Instantiate(instance.songButtonChildPrefab, container);
 
+                // Event trigger to enable auto-height panning on select.
                 EventTrigger eventTrigger2 = (EventTrigger) songButtonChild.gameObject.AddComponent(typeof (EventTrigger));
                 EventTrigger.Entry eventTriggerEntry2 = new EventTrigger.Entry();
                 eventTriggerEntry2.eventID = EventTriggerType.Select;
@@ -508,10 +578,7 @@ public class GameManager : MonoBehaviour {
 			}
 		}
 
-        print(instance.currentSelectedSongHeader);
-        print(EventSystem.current);
         EventSystem.current.SetSelectedGameObject(instance.currentSelectedSongHeader);
-        print(EventSystem.current);
 	}
 
     public static List<OsuParsers.Beatmaps.Beatmap> LoadBeatmapsFromFolder(string path){
@@ -530,10 +597,12 @@ public class GameManager : MonoBehaviour {
     }
 
     public static AudioClip GetBeatmapAudioClip(OsuParsers.Beatmaps.Beatmap beatmap, string oszName){
+        // Check if dictionary already contains AudioClip for the beatmap. If true, returns it.
         if (beatmapsAudioClipDictionary.ContainsKey(oszName) && beatmapsAudioClipDictionary[oszName] is AudioClip){
             return beatmapsAudioClipDictionary[oszName];
         }
 
+        // Get .mp3 from path and loads it using Resources API into memory.
         DirectoryInfo info = new DirectoryInfo(Path.Combine(beatmapExtractedPath, oszName));
         FileInfo audioFile = info.GetFiles(beatmap.GeneralSection.AudioFilename)[0];
 
@@ -549,6 +618,7 @@ public class GameManager : MonoBehaviour {
         return clip;
     }
 
+    // DEPRECATED: This uses MP3Sharp.
     public static IEnumerator GetBeatmapAudioClip(OsuParsers.Beatmaps.Beatmap beatmap, System.Action<AudioClip> callback){
         DirectoryInfo info = new DirectoryInfo(Path.Combine(beatmapExtractedPath, currentBeatmapOszName));
         FileInfo audioFile = info.GetFiles(beatmap.GeneralSection.AudioFilename)[0];
@@ -573,6 +643,7 @@ public class GameManager : MonoBehaviour {
 
     // http://answers.unity.com/answers/632260/view.html
     // https://github.com/ZaneDubya/MP3Sharp
+    // DEPRECATED: This uses MP3Sharp.
     private static AudioClip GetAudioClipFromMP3ByteArray( byte[] in_aMP3Data ){
         AudioClip l_oAudioClip = null;
         Stream l_oByteStream = new MemoryStream( in_aMP3Data );
@@ -641,7 +712,6 @@ public class GameManager : MonoBehaviour {
     public static void Stop(){
         gameState = gameState & ~GameState.Started;
 
-        BeatmapGame.instance.musicSource.Stop();
         BeatmapGame.instance.RemoveAllBeats();
     }
 
@@ -701,14 +771,17 @@ public class GameManager : MonoBehaviour {
             }
         }
 
+        // Enables toggling from Song Highscore menu to Song Menu.
         if (Input.GetButtonDown("Left Drum") && instance.songMenu.gameObject.activeSelf){
-            SongButtonRanking sbr = EventSystem.current.currentSelectedGameObject.GetComponent<SongButtonRanking>();
+            SongButtonRanking sbr = lastSelectedGameObject.GetComponent<SongButtonRanking>();
 
             if (sbr){
                 EventSystem.current.SetSelectedGameObject(instance.currentSelectedSongBeatmap);
-            } else if (instance.currentSelectedSongButtonRankingButton) {
-                EventSystem.current.SetSelectedGameObject(instance.currentSelectedSongButtonRankingButton);
             }
+        }
+
+        if (EventSystem.current.currentSelectedGameObject != lastSelectedGameObject){
+            lastSelectedGameObject = EventSystem.current.currentSelectedGameObject;
         }
 
         // Rotate skybox.
@@ -730,11 +803,9 @@ public class GameManager : MonoBehaviour {
         }
 
         if ((gameState & GameState.Paused) == GameState.Paused){
-            print("Paused");
             ShowPauseMenu(true);
             BeatmapGame.instance.musicSource.Pause();
         } else {
-            print("Resumed");
             ShowPauseMenu(false);
             BeatmapGame.instance.musicSource.UnPause();
         }

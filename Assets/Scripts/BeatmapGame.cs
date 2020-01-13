@@ -28,13 +28,13 @@ public enum Drum {
 [System.Serializable]
 public class SongRanking {
     public string songTitle;
-    public SongVersionRanking[] songVersionRanking;
+    public SongVersionRanking[] songVersionRankings;
 }
 
 [System.Serializable]
 public class SongVersionRanking {
     public string songVersion;
-    public SongPlayRanking[] rankings;
+    public SongPlayRanking[] songPlayRankings;
 }
 
 [System.Serializable]
@@ -80,7 +80,7 @@ public enum Grade {
 public class BeatmapGame : MonoBehaviour {
     
     public static BeatmapGame instance;
-    public const bool DEBUG_MODE = false;
+    public const bool DEBUG_MODE = true;
 
     public List<OsuParsers.Beatmaps.Objects.HitObject> hitObjects = new List<OsuParsers.Beatmaps.Objects.HitObject>();
     public List<Beat> beats = new List<Beat>();
@@ -162,19 +162,20 @@ public class BeatmapGame : MonoBehaviour {
             Destroy(t.gameObject);
         }
 
-        // beatTransform.position = GetDrumMarkerTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
-
-        GameObject linePerfect = Instantiate(lineIndicator, lineIndicatorHolder);
-        linePerfect.transform.position += Vector3.forward * (((float) 0 / 1000) * beatSpeed);
-        linePerfect.name = "LinePerfectIndicator";
+        // GameObject linePerfect = Instantiate(lineIndicator, lineIndicatorHolder);
+        // linePerfect.transform.position += Vector3.forward * (((float) 0 / 1000) * beatSpeed);
+        // linePerfect.name = "LinePerfectIndicator";
+        // linePerfect.GetComponent<MeshRenderer>().material.color = Color.blue;
 
         GameObject lineGreat = Instantiate(lineIndicator, lineIndicatorHolder);
         lineGreat.transform.position += Vector3.forward * (((float) beatHitGreatMs / 1000) * beatSpeed);
         lineGreat.name = "LineGreatIndicator";
-
+        lineGreat.GetComponent<MeshRenderer>().material.color = Color.blue;
+        
         GameObject lineGood = Instantiate(lineIndicator, lineIndicatorHolder);
         lineGood.transform.position += Vector3.forward * (((float) beatHitGoodMs / 1000) * beatSpeed);
         lineGood.name = "LineGoodIndicator";
+        lineGood.GetComponent<MeshRenderer>().material.color = Color.magenta;
     }
 
     void Awake(){
@@ -255,8 +256,6 @@ public class BeatmapGame : MonoBehaviour {
 
         // Read mp3 file from local disk and convert byte to PCM. Look at MP3Sharp.
         // StartCoroutine(GameManager.GetBeatmapAudioClip(beatmap, PlayBeatmapSong));
-
-        // GameManager.gameState = GameManager.gameState | GameState.Started;
     }
 
     private void PlayBeatmapSong(AudioClip audioClip){
@@ -275,6 +274,7 @@ public class BeatmapGame : MonoBehaviour {
         // Just wait 1 second 4HEad. Because the game is lagging.
         yield return new WaitForSeconds(1f);
 
+        // Add in beautiful color to indicate song plays after.
         for(int i = ms; i > 0; i -= (int) (Time.deltaTime * 1000f)){
             GameManager.UpdateSongProgressSlider((float) i/ms);
             yield return new WaitForEndOfFrame();
@@ -286,11 +286,16 @@ public class BeatmapGame : MonoBehaviour {
         musicSource.time = songTimer / 1000;
         musicSource.Play();
 
+        // Add started to game state.
         GameManager.gameState = GameManager.gameState | GameState.Started;
     }
 
-    // Update is called once per frame
-    void Update(){
+    private Vector3 CalculateBeatPosition(Beat beat){
+        return GetDrumMarkerTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
+    }
+
+    
+    private void Update(){
         // Paused and Started.
         //  011
         // &011
@@ -315,11 +320,12 @@ public class BeatmapGame : MonoBehaviour {
         //  ---
         //  000 != 001
         // print(GameManager.gameState & (GameState.Started | GameState.Paused));
+
+        // If game state doesn't match started, return.
         if ((GameManager.gameState & (GameState.Started | GameState.Paused)) != (GameState.Started)){
             return;
         }
 
-        // songTimer += (int) (1);
         songTimer = (int)(musicSource.time * 1000);
         GameManager.UpdateSongProgressSlider((float) songTimer/beatmapDuration);
 
@@ -328,7 +334,8 @@ public class BeatmapGame : MonoBehaviour {
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.Q)){
+        // Instantly finishes the song.
+        if (DEBUG_MODE && Input.GetKeyDown(KeyCode.Q)){
             OnSongEnd();
             return;
         }
@@ -349,7 +356,7 @@ public class BeatmapGame : MonoBehaviour {
             }
         }
 
-        // Move beats.
+        // Loop through beats.
         for(int i = 0; i < beats.Count; i++){
             Beat beat = beats[i];
             Transform beatTransform = beat.transform;
@@ -358,11 +365,10 @@ public class BeatmapGame : MonoBehaviour {
                 continue;
             }
 
-            // beatTransform.position += -Vector3.forward * (Time.deltaTime * musicSource.pitch) * beatSpeed;
-            beatTransform.position = GetDrumMarkerTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
+            beatTransform.position = CalculateBeatPosition(beat);
 
             // Miss.
-            if (beat.offset + beatHitGoodMs < songTimer){
+            if (beat.offset < songTimer){
                 ScoreBeat(beat, ColorToDrum(beat.color));
             }
 
@@ -374,7 +380,7 @@ public class BeatmapGame : MonoBehaviour {
                 HitDrum(ColorToDrum(beat.color));
             }
 
-            // Perfect time formula: beat.hitObject.StartTime + beat.delay <= songTimer
+            // Perfect time formula: beat.hitObject.StartTime + beat.delay == songTimer
             if (autoHitPerfect && beat.offset <= songTimer){
                 HitDrum(ColorToDrum(beat.color));
             }
@@ -417,17 +423,23 @@ public class BeatmapGame : MonoBehaviour {
         Score score = Score.Miss;
         int startTime = beat.offset;
 
-        print(string.Format("startTime: {0}, hitTime: {1}, color: {2}, drum: {3}", startTime, songTimer, beat.color, drum));
+        print($"startTime: {startTime}, hitTime: {songTimer}, color: {beat.color}, drum: {drum}");
 
         // Miss.
         if (drum != ColorToDrum(beat.color)){
             return score;
         }
 
-        float deltaOffset = Mathf.Abs(songTimer - startTime);
-        if (deltaOffset <= beatHitGreatMs){
+        float deltaTime = startTime - songTimer;
+
+        // Miss.
+        if (deltaTime <= 0){
+            return score;
+        }
+
+        if (deltaTime <= beatHitGreatMs){
             score = Score.Great;
-        } else if (deltaOffset <= beatHitGoodMs){
+        } else if (deltaTime <= beatHitGoodMs){
             score = Score.Good;
         }
 
@@ -540,8 +552,8 @@ public class BeatmapGame : MonoBehaviour {
         // gameLight.enabled = true;
     }
 
-    //length is how long the vibration should go for
-    //strength is vibration strength from 0-1
+    // Length is how long the vibration should go for
+    // Strength is vibration strength from 0-1
     IEnumerator LongVibration(float length, float strength)
     {
         for (float i = 0; i < length; i += Time.deltaTime)
@@ -577,7 +589,7 @@ public class BeatmapGame : MonoBehaviour {
             // startTime == songTimer = 0
 
             if (songTimer + beatHitRegisterAsHitMs <= startTime){
-                print("Don't register drum hits.");
+                print("Don't register drum hit.");
                 return;
             }
 
@@ -600,13 +612,18 @@ public class BeatmapGame : MonoBehaviour {
     }
 
     private void SpawnHitObject(OsuParsers.Beatmaps.Objects.HitObject hitObject){
+        // HitObject can be a Slider, or TaikoDrumroll. If it is either of them, parse each of the ticks
+        // as a beat. SpawnSlider method is made to simplify the call order.
+
         if (hitObject is OsuParsers.Beatmaps.Objects.Slider){
             OsuParsers.Beatmaps.Objects.Slider slider = (OsuParsers.Beatmaps.Objects.Slider) hitObject;
             SpawnSlider(slider);
 
         } else if (hitObject is OsuParsers.Beatmaps.Objects.Taiko.TaikoDrumroll){
+            // Note: TaikoDrumroll extends from Slider, so it can be considered as a Slider.
             OsuParsers.Beatmaps.Objects.Taiko.TaikoDrumroll taikoDrumroll = (OsuParsers.Beatmaps.Objects.Taiko.TaikoDrumroll) hitObject;
             SpawnSlider(taikoDrumroll);
+
         } else {
             SpawnBeat(hitObject);
         }
@@ -702,7 +719,7 @@ public class BeatmapGame : MonoBehaviour {
         }
 
         // beat.transform.position = GetDrumTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float)(hitObject.StartTime + delay - songTimer)/(1000f / beatSpeed));
-        beat.transform.position = GetDrumMarkerTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
+        beat.transform.position = CalculateBeatPosition(beat);
 
         beats.Add(beat);
         latestSpawnedBeat += 1;

@@ -26,6 +26,7 @@ public class SongButtonRanking : MonoBehaviour
         GameManager.ShowSongMenu(false);
         GameManager.ShowGradeMenu(true);
 
+        // State for grade menu back button to return to ranking button.
         GameManager.backToSelectRank = true;
     }
 
