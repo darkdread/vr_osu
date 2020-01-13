@@ -73,6 +73,7 @@ public class GameManager : MonoBehaviour {
     public TMPro.TextMeshProUGUI gradeAccuracyText;
     public TMPro.TextMeshProUGUI gradeScoreText;
     public Button gradeBackButton;
+    public XCharts.LineChart lineChart;
 
     public static bool backToSelectRank = false;
 
@@ -132,6 +133,8 @@ public class GameManager : MonoBehaviour {
 
             songMenuMainMenuButton.onClick.AddListener(delegate{
                 Pause(false);
+                Stop();
+                ShowGameMenu(false);
                 ShowSongMenu(true);
             });
 
@@ -279,6 +282,13 @@ public class GameManager : MonoBehaviour {
 
         fs.Write(jsonToBytes, 0, jsonToBytes.Length);
         fs.Close();
+    }
+
+    public static void CalculateLineChart(float[] accuracyChart){
+        instance.lineChart.series.ClearData();
+        for(int i = 0; i < accuracyChart.Length; i++){
+            instance.lineChart.series.AddData("PerformanceChart", accuracyChart[i] * 100);
+        }
     }
 
     public static void ShowGradeMenu(bool show){
@@ -629,6 +639,9 @@ public class GameManager : MonoBehaviour {
 
     public static void Stop(){
         gameState = gameState & ~GameState.Started;
+
+        BeatmapGame.instance.musicSource.Stop();
+        BeatmapGame.instance.RemoveAllBeats();
     }
 
     public static void UpdateScoreText(string score){
@@ -664,6 +677,8 @@ public class GameManager : MonoBehaviour {
         instance.gradeAccuracyText.text = accuracy.ToString() + "%";
 
         instance.gradeText.text = ranking.grade;
+
+        CalculateLineChart(ranking.accuracyChart);
     }
 
     public static void UpdateSongProgressSliderColor(Color color){

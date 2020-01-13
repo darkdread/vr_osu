@@ -40,6 +40,7 @@ public class SongVersionRanking {
 [System.Serializable]
 public class SongPlayRanking {
     public BeatsHit beatsHit;
+    public float[] accuracyChart;
     public int score;
     public int highestCombo;
     public float accuracy;
@@ -117,6 +118,7 @@ public class BeatmapGame : MonoBehaviour {
     public float accuracy = 1;
     public Grade grade;
     public BeatsHit beatsHit;
+    public List<float> accuracyChart = new List<float>();
 
     // Time it takes for beatmap to end after last beat.
     private int beatmapFade = 3000;
@@ -186,6 +188,14 @@ public class BeatmapGame : MonoBehaviour {
         }
     }
 
+    public void RemoveAllBeats(){
+        for(int i = 0; i < beats.Count; i++){
+            Destroy(beats[i].gameObject);
+        }
+
+        beats.Clear();
+    }
+
     public void StartBeatmap(OsuParsers.Beatmaps.Beatmap beatmap){
         GameManager.StopPreview();
 
@@ -212,6 +222,8 @@ public class BeatmapGame : MonoBehaviour {
             Miss = 0
         };
 
+        accuracyChart.Clear();
+
         songTimer = 0;
         latestSpawnedBeat = 0;
         closestBeat = 0;
@@ -226,11 +238,7 @@ public class BeatmapGame : MonoBehaviour {
 
         musicSource.Stop();
 
-        for(int i = 0; i < beats.Count; i++){
-            Destroy(beats[i].gameObject);
-        }
-
-        beats.Clear();
+        RemoveAllBeats();
 
         // Spawn beats.
         for(int i = 0; i < hitObjects.Count; i++){
@@ -458,6 +466,7 @@ public class BeatmapGame : MonoBehaviour {
         }
 
         accuracy = CalculateAccuracy();
+        accuracyChart.Add(accuracy);
 
         SpawnHitText(beat.transform.position, gainedScore.ToString());
 
@@ -709,7 +718,8 @@ public class BeatmapGame : MonoBehaviour {
             score = score,
             accuracy = accuracy,
             grade = GradeToString(grade),
-            beatsHit = beatsHit
+            beatsHit = beatsHit,
+            accuracyChart = accuracyChart.ToArray()
         };
 
         return ranking;
