@@ -41,6 +41,7 @@ public class GameManager : MonoBehaviour {
     public Text accuracyText;
     public Text comboText;
     public Slider songProgressSlider;
+    public Transform gameMenuHitTextTransform;
 
     [Header("Song Menu UI")]
     public Transform songMenu;

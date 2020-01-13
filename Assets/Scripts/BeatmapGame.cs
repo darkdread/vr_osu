@@ -452,23 +452,27 @@ public class BeatmapGame : MonoBehaviour {
         }
 
         score += gain * combo;
+        Color color = Color.white;
 
         switch(gainedScore){
             case Score.Great:
                 beatsHit.Great += 1;
+                color = Color.blue;
                 break;
             case Score.Good:
                 beatsHit.Good += 1;
+                color = Color.magenta;
                 break;
             case Score.Miss:
                 beatsHit.Miss += 1;
+                color = Color.red;
                 break;
         }
 
         accuracy = CalculateAccuracy();
         accuracyChart.Add(accuracy);
 
-        SpawnHitText(beat.transform.position, gainedScore.ToString());
+        SpawnHitText(beat.transform.position, gainedScore.ToString(), color);
 
         GameManager.UpdateAccuracyText((accuracy * 100).ToString() + "%");
         GameManager.UpdateScoreText(score.ToString());
@@ -547,12 +551,16 @@ public class BeatmapGame : MonoBehaviour {
         }
     }
 
-    private void SpawnHitText(Vector3 position, string text){
+    private void SpawnHitText(Vector3 position, string text, Color color){
         TextMeshProUGUI hitText = Instantiate(hitTextPrefab, hitTextHolder).GetComponent<TextMeshProUGUI>();
         hitText.text = text;
+        hitText.color = color;
 
         Vector3 offset = Vector3.up * 1f;
         hitText.transform.position = position;
+
+        hitText.transform.position = GameManager.instance.gameMenuHitTextTransform.position;
+        //hitText.rectTransform.anchoredPosition += new Vector2(-hitText.rectTransform.rect.width / 2, hitText.rectTransform.rect.height/ 2);
 
         Destroy(hitText.gameObject, 2f);
     }
