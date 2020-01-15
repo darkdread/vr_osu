@@ -17,7 +17,7 @@ public enum TaikoColorExtended {
     White = 3
 }
 
-public enum Drum {
+public enum Lane {
     Empty = -1,
     Right = 0,
     Left = 1,
@@ -55,7 +55,7 @@ public enum Score {
 
 [System.Serializable]
 public class DrumTransformPair {
-    public Drum drum;
+    public Lane lane;
     public Transform drumTransform;
     public Transform drumMarkerTransform;
 }
@@ -90,7 +90,8 @@ public class BeatmapGame : MonoBehaviour {
     public Light gameLight;
     public Beat beatPrefab;
     public Transform beatHolder;
-    public Transform lineIndicatorHolder;
+    public Transform indicatorHolder;
+    public GameObject indicatorPrefab;
     public GameObject lineIndicator;
     public Transform hitTextHolder;
     public GameObject hitTextPrefab;
@@ -130,26 +131,45 @@ public class BeatmapGame : MonoBehaviour {
     public AudioSource musicSource;
     public AudioSource sfxSource;
 
-    public static Drum GetDrum(Transform t)
+    public static Lane GetLane(Transform t)
     {
         foreach (DrumTransformPair drumTransformPair in instance.drumTransformPairs)
         {
             if (drumTransformPair.drumTransform == t)
             {
-                return drumTransformPair.drum;
+                return drumTransformPair.lane;
             }
         }
 
-        return Drum.Empty;
+        return Lane.Empty;
     }
 
-    private Drum ColorToDrum(TaikoColorExtended color){
-        return (Drum) color;
+    private Lane ColorToLane(TaikoColorExtended color){
+        return (Lane) color;
     }
 
-    private DrumTransformPair GetDrumMarkerTransformPair(Drum drum){
+    private TaikoColorExtended LaneToColor(Lane lane){
+        return (TaikoColorExtended) lane;
+    }
+
+    private Color TaikoColorToColor(TaikoColorExtended colorExtended){
+        switch(colorExtended){
+            case TaikoColorExtended.Blue:
+                return Color.blue;
+            case TaikoColorExtended.Red:
+                return Color.red;
+            case TaikoColorExtended.White:
+                return Color.white;
+
+            case TaikoColorExtended.Green:
+            default:
+                return Color.green;
+        }
+    }
+
+    private DrumTransformPair GetDrumMarkerTransformPair(Lane lane){
         for(int i = 0; i < drumTransformPairs.Count; i++){
-            if (drumTransformPairs[i].drum == drum){
+            if (drumTransformPairs[i].lane == lane){
                 return drumTransformPairs[i];
             }
         }
@@ -157,25 +177,47 @@ public class BeatmapGame : MonoBehaviour {
         return null;
     }
 
-    private void SpawnLinesIndicator(){
-        foreach(Transform t in lineIndicatorHolder){
+    private GameObject SpawnLineIndicator(int offset, string name, Color color){
+        GameObject lineGameObject = Instantiate(lineIndicator, indicatorHolder);
+        lineGameObject.transform.position += Vector3.forward * (((float) offset / 1000) * beatSpeed);
+        lineGameObject.name = name;
+        lineGameObject.GetComponent<MeshRenderer>().material.color = color;
+
+        return lineGameObject;
+    }
+
+    private List<GameObject> SpawnIndicators(int offset, string name){
+        List<GameObject> indicators = new List<GameObject>();
+
+        foreach(DrumTransformPair dtp in drumTransformPairs){
+            Vector3 pos = dtp.drumMarkerTransform.position;
+            pos.z = 0;
+
+            GameObject indicator = Instantiate(indicatorPrefab, indicatorHolder);
+            indicator.transform.position = pos + Vector3.forward * (((float) offset / 1000) * beatSpeed);
+            indicator.name = name;
+            indicator.GetComponent<MeshRenderer>().material.color = TaikoColorToColor(LaneToColor(dtp.lane));
+
+            indicators.Add(indicator);
+        }
+
+        return indicators;
+    }
+
+    private void SpawnIndicator(){
+        foreach(Transform t in indicatorHolder){
             Destroy(t.gameObject);
         }
 
-        // GameObject linePerfect = Instantiate(lineIndicator, lineIndicatorHolder);
-        // linePerfect.transform.position += Vector3.forward * (((float) 0 / 1000) * beatSpeed);
-        // linePerfect.name = "LinePerfectIndicator";
-        // linePerfect.GetComponent<MeshRenderer>().material.color = Color.blue;
+        // List<GameObject> perfectIndicators = SpawnIndicators(0, "Perfect");
 
-        GameObject lineGreat = Instantiate(lineIndicator, lineIndicatorHolder);
-        lineGreat.transform.position += Vector3.forward * (((float) beatHitGreatMs / 1000) * beatSpeed);
-        lineGreat.name = "LineGreatIndicator";
-        lineGreat.GetComponent<MeshRenderer>().material.color = Color.blue;
+        GameObject linePerfect = SpawnLineIndicator(0, "LinePerfectIndicator", Color.red);
+
+        GameObject lineGreat = SpawnLineIndicator(beatHitGreatMs, "LineGreatIndicator", Color.blue);
+        GameObject lineGreatNegative = SpawnLineIndicator(-beatHitGreatMs, "LineGreatIndicatorNegative", Color.blue);
         
-        GameObject lineGood = Instantiate(lineIndicator, lineIndicatorHolder);
-        lineGood.transform.position += Vector3.forward * (((float) beatHitGoodMs / 1000) * beatSpeed);
-        lineGood.name = "LineGoodIndicator";
-        lineGood.GetComponent<MeshRenderer>().material.color = Color.magenta;
+        GameObject lineGood = SpawnLineIndicator(beatHitGoodMs, "LineGoodIndicator", Color.magenta);
+        GameObject lineGoodNegative = SpawnLineIndicator(-beatHitGoodMs, "LineGoodIndicatorNegative", Color.magenta);
     }
 
     void Awake(){
@@ -269,7 +311,7 @@ public class BeatmapGame : MonoBehaviour {
         GameManager.UpdateSongProgressSliderColor(Color.red);
         GameManager.UpdateSongProgressSlider((float) 1f);
 
-        SpawnLinesIndicator();
+        SpawnIndicator();
 
         // Just wait 1 second 4HEad. Because the game is lagging.
         yield return new WaitForSeconds(1f);
@@ -291,7 +333,7 @@ public class BeatmapGame : MonoBehaviour {
     }
 
     private Vector3 CalculateBeatPosition(Beat beat){
-        return GetDrumMarkerTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
+        return GetDrumMarkerTransformPair(ColorToLane(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float) (beat.offset - songTimer) / 1000) * beatSpeed;
     }
 
     
@@ -368,21 +410,21 @@ public class BeatmapGame : MonoBehaviour {
             beatTransform.position = CalculateBeatPosition(beat);
 
             // Miss.
-            if (beat.offset < songTimer){
-                ScoreBeat(beat, ColorToDrum(beat.color));
+            if (beat.offset + beatHitGoodMs < songTimer){
+                ScoreBeat(beat, ColorToLane(beat.color));
             }
 
             if (autoHitGood && beat.offset - beatHitGoodMs <= songTimer){
-                HitDrum(ColorToDrum(beat.color));
+                HitDrum(ColorToLane(beat.color));
             }
 
             if (autoHitGreat && beat.offset - beatHitGreatMs <= songTimer){
-                HitDrum(ColorToDrum(beat.color));
+                HitDrum(ColorToLane(beat.color));
             }
 
             // Perfect time formula: beat.hitObject.StartTime + beat.delay == songTimer
             if (autoHitPerfect && beat.offset <= songTimer){
-                HitDrum(ColorToDrum(beat.color));
+                HitDrum(ColorToLane(beat.color));
             }
         }
 
@@ -390,22 +432,22 @@ public class BeatmapGame : MonoBehaviour {
         {
             if (Input.GetButtonDown(ButtonsMapping.LeftDrum))
             {
-                HitDrum(Drum.Left);
+                HitDrum(Lane.Left);
             }
 
             if (Input.GetButtonDown(ButtonsMapping.RightDrum))
             {
-                HitDrum(Drum.Right);
+                HitDrum(Lane.Right);
             }
 
             if (Input.GetButtonDown(ButtonsMapping.LeftSideDrum))
             {
-                HitDrum(Drum.LeftSide);
+                HitDrum(Lane.LeftSide);
             }
 
             if (Input.GetButtonDown(ButtonsMapping.RightSideDrum))
             {
-                HitDrum(Drum.RightSide);
+                HitDrum(Lane.RightSide);
             }
         }
     }
@@ -419,23 +461,18 @@ public class BeatmapGame : MonoBehaviour {
         }
     }
 
-    private Score CalculateScore(Beat beat, Drum drum){
+    private Score CalculateScore(Beat beat, Lane drum){
         Score score = Score.Miss;
         int startTime = beat.offset;
 
         print($"startTime: {startTime}, hitTime: {songTimer}, color: {beat.color}, drum: {drum}");
 
         // Miss.
-        if (drum != ColorToDrum(beat.color)){
+        if (drum != ColorToLane(beat.color)){
             return score;
         }
 
-        float deltaTime = startTime - songTimer;
-
-        // Miss.
-        if (deltaTime <= 0){
-            return score;
-        }
+        float deltaTime = Mathf.Abs(startTime - songTimer);
 
         if (deltaTime <= beatHitGreatMs){
             score = Score.Great;
@@ -446,7 +483,7 @@ public class BeatmapGame : MonoBehaviour {
         return score;
     }
 
-    private void ScoreBeat(Beat beat, Drum drum){
+    private void ScoreBeat(Beat beat, Lane drum){
         beat.gameObject.SetActive(false);
         closestBeat += 1;
 
@@ -577,30 +614,50 @@ public class BeatmapGame : MonoBehaviour {
         Destroy(hitText.gameObject, 2f);
     }
 
-    public void HitDrum(Drum drum){
-        // Get closest beat within song timer.
-        Beat beat = GetClosestBeat();
+    public void HitDrum(Lane lane){
+        // Get all beats in lane.
+        List<Beat> laneBeats = GetBeatsFromLane(lane, beatHitGoodMs);
 
-        if (beat){
-            int startTime = beat.offset;
+        DrumTransformPair drumTransformPair = GetDrumMarkerTransformPair(lane);
 
-            // startTime > songTimer = +offset
-            // startTime < songTimer = -offset
-            // startTime == songTimer = 0
+        StartCoroutine(LongVibration(0.1f, 1f));
+        StartCoroutine(SetMaterialEmissionColor(drumTransformPair.drumTransform.GetComponent<MeshRenderer>().material, Color.white));
+        StartCoroutine(SetMaterialEmissionColor(drumTransformPair.drumMarkerTransform.GetComponent<MeshRenderer>().material, Color.white));
 
-            if (songTimer + beatHitRegisterAsHitMs <= startTime){
-                print("Don't register drum hit.");
-                return;
+        sfxSource.PlayOneShot(drumSfx);
+
+        if (laneBeats.Count <= 0){
+            return;
+        }
+
+        Beat firstBeatInLane = laneBeats[0];
+        int startTime = firstBeatInLane.offset;
+
+        // startTime > songTimer = +offset
+        // startTime < songTimer = -offset
+        // startTime == songTimer = 0
+
+        ScoreBeat(firstBeatInLane, lane);
+    }
+
+    public List<Beat> GetBeatsFromLane(Lane lane, int offsetMs = 0){
+        List<Beat> output = new List<Beat>();
+
+        foreach(Beat beat in beats){
+            if (!beat.gameObject.activeSelf){
+                continue;
             }
 
-            DrumTransformPair drumTransformPair = GetDrumMarkerTransformPair(drum);
+            if (lane == ColorToLane(beat.color)){
 
-            StartCoroutine(LongVibration(0.1f, 1f));
-            StartCoroutine(SetMaterialEmissionColor(drumTransformPair.drumTransform.GetComponent<MeshRenderer>().material, Color.white));
-
-            sfxSource.PlayOneShot(drumSfx);
-            ScoreBeat(beat, drum);
+                // Higher offset means beat is before actual hit time.
+                if (beat.offset - offsetMs < songTimer){
+                    output.Add(beat);
+                }
+            }
         }
+
+        return output;
     }
 
     public Beat GetClosestBeat(){
@@ -664,7 +721,7 @@ public class BeatmapGame : MonoBehaviour {
         Beat prevBeat = GetPreviousBeat();
 
         if (hitObject is OsuParsers.Beatmaps.Objects.Slider){
-            beat.GetComponent<MeshRenderer>().material.color = Color.black;
+            // beat.GetComponent<MeshRenderer>().material.color = Color.black;
         }
 
         OsuParsers.Enums.Beatmaps.TaikoColor originalColor = OsuParsers.Enums.Beatmaps.TaikoColor.Blue;
@@ -697,23 +754,18 @@ public class BeatmapGame : MonoBehaviour {
             }
         }
 
-        MeshRenderer meshRenderer = beat.GetComponent<MeshRenderer>();
-        MeshRenderer lineMeshRenderer = beat.transform.Find("Line").GetComponent<MeshRenderer>();
+        MeshRenderer lineMeshRenderer = beat.beatMeshRenderer;
 
         if (beat.color == TaikoColorExtended.Blue){
-            meshRenderer.material.color = Color.blue;
             lineMeshRenderer.material.color = Color.blue;
             lineMeshRenderer.material.SetColor("_EmissionColor", Color.blue * 0.5f);
         } else if (beat.color == TaikoColorExtended.Red) {
-            meshRenderer.material.color = Color.red;
             lineMeshRenderer.material.color = Color.red;
             lineMeshRenderer.material.SetColor("_EmissionColor", Color.red * 0.5f);
         } else if (beat.color == TaikoColorExtended.White) {
-            meshRenderer.material.color = Color.white;
             lineMeshRenderer.material.color = Color.white;
             lineMeshRenderer.material.SetColor("_EmissionColor", Color.white * 0.5f);
         } else if (beat.color == TaikoColorExtended.Green) {
-            meshRenderer.material.color = Color.green;
             lineMeshRenderer.material.color = Color.green;
             lineMeshRenderer.material.SetColor("_EmissionColor", Color.green * 0.5f);
         }

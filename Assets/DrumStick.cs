@@ -7,8 +7,8 @@ public class DrumStick : MonoBehaviour
 
     private void OnTriggerEnter(Collider collider)
     {
-        Drum d = BeatmapGame.GetDrum(collider.transform);
-        if (d != Drum.Empty)
+        Lane d = BeatmapGame.GetLane(collider.transform);
+        if (d != Lane.Empty)
         {
             if (isHittingDrum)
             {
@@ -29,8 +29,8 @@ public class DrumStick : MonoBehaviour
 
     private void OnTriggerExit(Collider collider)
     {
-        Drum d = BeatmapGame.GetDrum(collider.transform);
-        if (d == Drum.Empty)
+        Lane d = BeatmapGame.GetLane(collider.transform);
+        if (d == Lane.Empty)
         {
             isHittingDrum = false;
         }

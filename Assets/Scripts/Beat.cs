@@ -8,4 +8,5 @@ public class Beat : MonoBehaviour
     public TaikoColorExtended color = TaikoColorExtended.Blue;
     public int delay = 0;
     public int offset = 0;
+    public MeshRenderer beatMeshRenderer;
 }
