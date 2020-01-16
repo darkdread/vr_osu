@@ -101,6 +101,7 @@ public class BeatmapGame : MonoBehaviour {
     public bool autoHitGood = false;
     public bool autoHitGreat = false;
     public bool autoHitPerfect = false;
+    public bool spawnLineIndicators = false;
 
     public int beatHitGreatMs = 30;
     public int beatHitGoodMs = 50;
@@ -211,13 +212,16 @@ public class BeatmapGame : MonoBehaviour {
 
         // List<GameObject> perfectIndicators = SpawnIndicators(0, "Perfect");
 
-        GameObject linePerfect = SpawnLineIndicator(0, "LinePerfectIndicator", Color.red);
+        if (spawnLineIndicators){
 
-        GameObject lineGreat = SpawnLineIndicator(beatHitGreatMs, "LineGreatIndicator", Color.blue);
-        GameObject lineGreatNegative = SpawnLineIndicator(-beatHitGreatMs, "LineGreatIndicatorNegative", Color.blue);
-        
-        GameObject lineGood = SpawnLineIndicator(beatHitGoodMs, "LineGoodIndicator", Color.magenta);
-        GameObject lineGoodNegative = SpawnLineIndicator(-beatHitGoodMs, "LineGoodIndicatorNegative", Color.magenta);
+            GameObject linePerfect = SpawnLineIndicator(0, "LinePerfectIndicator", Color.red);
+
+            GameObject lineGreat = SpawnLineIndicator(beatHitGreatMs, "LineGreatIndicator", Color.blue);
+            GameObject lineGreatNegative = SpawnLineIndicator(-beatHitGreatMs, "LineGreatIndicatorNegative", Color.blue);
+            
+            GameObject lineGood = SpawnLineIndicator(beatHitGoodMs, "LineGoodIndicator", Color.magenta);
+            GameObject lineGoodNegative = SpawnLineIndicator(-beatHitGoodMs, "LineGoodIndicatorNegative", Color.magenta);
+        }
     }
 
     void Awake(){
