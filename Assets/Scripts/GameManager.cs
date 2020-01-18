@@ -11,7 +11,8 @@ using System.Text;
 
 public enum GameState {
     Started = 0x01,
-    Paused = 0x02
+    Paused = 0x02,
+    Resuming = 0x04,
 }
 
 public class GameManager : MonoBehaviour {
@@ -71,6 +72,7 @@ public class GameManager : MonoBehaviour {
     public Transform songMenuOptionsMenu;
     public Slider songMenuOptionsSfxSlider;
     public Slider songMenuOptionsMusicSlider;
+    public Toggle songMenuOptionsVfxToggle;
     public Button songMenuOptionsBackButton;
 
     [Header("Song Grade UI")]
@@ -126,6 +128,31 @@ public class GameManager : MonoBehaviour {
 
         PlayerPrefs.SetFloat("sfxVolume", volume);
     }
+
+    public static void UpdateVfx(bool active){
+        BeatmapGame.instance.showVisualEffects = active;
+
+        int isActive = active ? 1 : 0;
+        PlayerPrefs.SetInt("vfxActive", isActive);
+    }
+
+    private IEnumerator DelayResumeSong(int ms){
+        gameState = gameState | GameState.Resuming;
+        ShowPauseMenu(false);
+
+        UpdateSongProgressSliderColor(Color.red);
+        UpdateSongProgressSlider((float) 1f);
+
+        for(int i = ms; i > 0; i -= (int) (Time.deltaTime * 1000f)){
+            GameManager.UpdateSongProgressSlider((float) i/ms);
+            yield return new WaitForEndOfFrame();
+        }
+
+        gameState = gameState & ~GameState.Resuming;
+        GameManager.UpdateSongProgressSliderColor(Color.green);
+
+        Pause(false);
+    }
     
     private void Awake(){
         if (instance == null){
@@ -152,7 +179,7 @@ public class GameManager : MonoBehaviour {
 
             // Game Pause Menu.
             songMenuPauseContinueButton.onClick.AddListener(delegate{
-                Pause(false);
+                StartCoroutine(DelayResumeSong(1000));
             });
 
             songMenuPauseRetryButton.onClick.AddListener(delegate{
@@ -187,9 +214,16 @@ public class GameManager : MonoBehaviour {
                 UpdateSfxVolume(songMenuOptionsSfxSlider.value);
             });
 
+            songMenuOptionsVfxToggle.onValueChanged.AddListener(delegate{
+                UpdateVfx(songMenuOptionsVfxToggle.isOn);
+            });
+
             // Player prefs.
             songMenuOptionsMusicSlider.value = PlayerPrefs.GetFloat("musicVolume", 1f);
             songMenuOptionsSfxSlider.value = PlayerPrefs.GetFloat("sfxVolume", 1f);
+
+            bool vfxActive = PlayerPrefs.GetInt("vfxActive", 1) == 1 ? true : false;
+            songMenuOptionsVfxToggle.isOn = vfxActive;
 
             // For all builds other than UNITY_EDITOR. Modifies path to get files.
             if (production){
@@ -508,6 +542,11 @@ public class GameManager : MonoBehaviour {
 	}
 
 	public static void LoadAllBeatmapsIntoMenu() {
+        // Destroy all existing beatmaps.
+        foreach(Transform t in instance.songMenuContent){
+            Destroy(t.gameObject);
+        }
+
         instance.currentSelectedSongHeader = null;
 
         // Load all beatmaps in dictionary into buttons for song menu.
@@ -763,7 +802,7 @@ public class GameManager : MonoBehaviour {
     private void Update(){
         if ((gameState & GameState.Started) == GameState.Started){
             if (Input.GetButtonDown("Pause")){
-                Pause((gameState & GameState.Paused) != GameState.Paused);
+                Pause((gameState & (GameState.Paused)) != GameState.Paused);
             }
 
             if (Input.GetKeyDown(KeyCode.R)){
@@ -790,16 +829,16 @@ public class GameManager : MonoBehaviour {
     }
 
     public void Pause(bool toPause){
-        // Game hasn't started, can't pause.
-        if ((gameState & GameState.Started) != GameState.Started ){
-            print("Can't pause an unstarted game");
+        // Game hasn't started or is resuming, can't pause.
+        if ((gameState & (GameState.Started | GameState.Resuming)) != GameState.Started){
+            print($"Can't pause because of current state: {gameState}");
             return;
         }
 
         if (toPause){
             gameState = gameState | GameState.Paused;
         } else {
-            gameState = gameState ^ GameState.Paused;
+            gameState = gameState & ~GameState.Paused;
         }
 
         if ((gameState & GameState.Paused) == GameState.Paused){

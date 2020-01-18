@@ -97,6 +97,11 @@ public class BeatmapGame : MonoBehaviour {
     public GameObject hitTextPrefab;
     public AudioClip drumSfx;
 
+    [Header("Visual Effects")]
+    public bool showVisualEffects = false;
+    public GameObject beatHitIndicatorEffectPrefab;
+    public GameObject beatHitExplodeEffectPrefab;
+
     [Header("Options")]
     public bool autoHitGood = false;
     public bool autoHitGreat = false;
@@ -300,7 +305,7 @@ public class BeatmapGame : MonoBehaviour {
         AudioClip clip = GameManager.GetBeatmapAudioClip(beatmap, GameManager.currentBeatmapOszName);
         PlayBeatmapSong(clip);
 
-        // Read mp3 file from local disk and convert byte to PCM. Look at MP3Sharp.
+        // // Read mp3 file from local disk and convert byte to PCM. Look at MP3Sharp.
         // StartCoroutine(GameManager.GetBeatmapAudioClip(beatmap, PlayBeatmapSong));
     }
 
@@ -372,10 +377,15 @@ public class BeatmapGame : MonoBehaviour {
             return;
         }
 
-        songTimer = (int)(musicSource.time * 1000);
-        GameManager.UpdateSongProgressSlider((float) songTimer/beatmapDuration);
+        // Finished playing, we need to continue the song timer for fade effect.
+        if (!musicSource.isPlaying){
+            songTimer += (int)(Time.deltaTime * 1000);
+        } else {
+            songTimer = (int)(musicSource.time * 1000);
+            GameManager.UpdateSongProgressSlider((float) songTimer/beatmapDuration);
+        }
 
-        if (songTimer >= beatmapDuration){
+        if (songTimer >= beatmapDuration + beatmapFade){
             OnSongEnd();
             return;
         }
@@ -585,9 +595,11 @@ public class BeatmapGame : MonoBehaviour {
 
     private IEnumerator SetMaterialEmissionColor(Material material, Color color){
         material.EnableKeyword("_EMISSION");
+        print(material.IsKeywordEnabled("_EMISSION"));
         material.SetColor("_EmissionColor", color);
         // gameLight.enabled = false;
         yield return new WaitForSeconds(0.1f);
+        
 
         material.DisableKeyword("_EMISSION");
         // gameLight.enabled = true;
@@ -599,7 +611,7 @@ public class BeatmapGame : MonoBehaviour {
     {
         for (float i = 0; i < length; i += Time.deltaTime)
         {
-            SteamVR_Controller.Input(0).TriggerHapticPulse((ushort)Mathf.Lerp(0, 3999, strength));
+            // SteamVR_Controller.Input(0).TriggerHapticPulse((ushort)Mathf.Lerp(0, 3999, strength));
             yield return null;
         }
     }
@@ -618,17 +630,26 @@ public class BeatmapGame : MonoBehaviour {
         Destroy(hitText.gameObject, 2f);
     }
 
+    public GameObject SpawnEffect(GameObject effect, Vector3 position){
+        if (showVisualEffects){
+            return Instantiate(effect, position, Quaternion.identity);
+        }
+
+        return null;
+    }
+
     public void HitDrum(Lane lane){
-        // Get all beats in lane.
+        // Get all beats in lane within ms.
         List<Beat> laneBeats = GetBeatsFromLane(lane, beatHitGoodMs);
 
         DrumTransformPair drumTransformPair = GetDrumMarkerTransformPair(lane);
 
-        StartCoroutine(LongVibration(0.1f, 1f));
+        // StartCoroutine(LongVibration(0.1f, 1f));
         StartCoroutine(SetMaterialEmissionColor(drumTransformPair.drumTransform.GetComponent<MeshRenderer>().material, Color.white));
         StartCoroutine(SetMaterialEmissionColor(drumTransformPair.drumMarkerTransform.GetComponent<MeshRenderer>().material, Color.white));
 
         sfxSource.PlayOneShot(drumSfx);
+        GameObject hitIndicatorEffect = SpawnEffect(beatHitIndicatorEffectPrefab, drumTransformPair.drumMarkerTransform.position);
 
         if (laneBeats.Count <= 0){
             return;
@@ -636,6 +657,8 @@ public class BeatmapGame : MonoBehaviour {
 
         Beat firstBeatInLane = laneBeats[0];
         int startTime = firstBeatInLane.offset;
+
+        GameObject hitEffect = SpawnEffect(beatHitExplodeEffectPrefab, firstBeatInLane.transform.position);
 
         // startTime > songTimer = +offset
         // startTime < songTimer = -offset
