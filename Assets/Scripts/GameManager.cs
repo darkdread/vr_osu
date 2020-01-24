@@ -74,6 +74,7 @@ public class GameManager : MonoBehaviour {
     public Slider songMenuOptionsMusicSlider;
     public Toggle songMenuOptionsVfxToggle;
     public Button songMenuOptionsBackButton;
+    public AudioSource optionsAudioSource;
 
     [Header("Song Grade UI")]
     public Transform gradeMenu;
@@ -116,15 +117,24 @@ public class GameManager : MonoBehaviour {
         instance.previewAudioSource.clip = null;
     }
 
+    public static void PlayVolumeTestSfx(float volume){
+        instance.optionsAudioSource.volume = volume;
+        instance.optionsAudioSource.PlayOneShot(BeatmapGame.instance.drumSfx);
+    }
+
     public static void UpdateMusicVolume(float volume){
         BeatmapGame.instance.musicSource.volume = volume;
         instance.previewAudioSource.volume = volume;
+
+        PlayVolumeTestSfx(volume);
 
         PlayerPrefs.SetFloat("musicVolume", volume);
     }
 
     public static void UpdateSfxVolume(float volume){
         BeatmapGame.instance.sfxSource.volume = volume;
+
+        PlayVolumeTestSfx(volume);
 
         PlayerPrefs.SetFloat("sfxVolume", volume);
     }
