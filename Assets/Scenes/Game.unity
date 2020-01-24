@@ -6168,7 +6168,7 @@ MonoBehaviour:
     type: 3}
   autoHitGood: 0
   autoHitGreat: 0
-  autoHitPerfect: 0
+  autoHitPerfect: 1
   spawnLineIndicators: 0
   beatHitGreatMs: 50
   beatHitGoodMs: 100
@@ -10719,6 +10719,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: Drum Ground
+      objectReference: {fileID: 0}
+    - target: {fileID: -927199367670048503, guid: f7a9409609cf6434584ffba896657439,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f7a9409609cf6434584ffba896657439, type: 3}
@@ -18726,6 +18731,11 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 8
       objectReference: {fileID: 0}
+    - target: {fileID: 2163683227583430524, guid: 0b16d71ebbe4c89489ed6ba26836b11a,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2163683227583430525, guid: 0b16d71ebbe4c89489ed6ba26836b11a,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -18789,7 +18799,7 @@ PrefabInstance:
     - target: {fileID: 2163683227583430525, guid: 0b16d71ebbe4c89489ed6ba26836b11a,
         type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.675
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7865289877539178465, guid: 0b16d71ebbe4c89489ed6ba26836b11a,
         type: 3}

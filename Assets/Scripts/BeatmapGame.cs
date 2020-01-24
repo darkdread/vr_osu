@@ -132,7 +132,7 @@ public class BeatmapGame : MonoBehaviour {
     private int defaultApproachMs = 3000;
     private int approachMs = 1800;
     private int closestBeat = 0;
-    private int latestSpawnedBeat = 0;
+    private int latestSpawnedHitObject = 0;
     public OsuParsers.Enums.Ruleset originalMode;
     public AudioSource musicSource;
     public AudioSource sfxSource;
@@ -277,7 +277,7 @@ public class BeatmapGame : MonoBehaviour {
         accuracyChart.Clear();
 
         songTimer = 0;
-        latestSpawnedBeat = 0;
+        latestSpawnedHitObject = 0;
         closestBeat = 0;
         score = 0;
         combo = 0;
@@ -404,7 +404,7 @@ public class BeatmapGame : MonoBehaviour {
         }
 
         // Spawn beats.
-        for(int i = latestSpawnedBeat; i < hitObjects.Count; i++){
+        for(int i = latestSpawnedHitObject; i < hitObjects.Count; i++){
             OsuParsers.Beatmaps.Objects.HitObject hitObject = hitObjects[i];
 
             if (hitObject.StartTime + -approachMs <= songTimer){
@@ -595,7 +595,6 @@ public class BeatmapGame : MonoBehaviour {
 
     private IEnumerator SetMaterialEmissionColor(Material material, Color color){
         material.EnableKeyword("_EMISSION");
-        print(material.IsKeywordEnabled("_EMISSION"));
         material.SetColor("_EmissionColor", color);
         // gameLight.enabled = false;
         yield return new WaitForSeconds(0.1f);
@@ -699,6 +698,9 @@ public class BeatmapGame : MonoBehaviour {
         // HitObject can be a Slider, or TaikoDrumroll. If it is either of them, parse each of the ticks
         // as a beat. SpawnSlider method is made to simplify the call order.
 
+        // SpawnBeat(hitObject);
+        // return;
+
         if (hitObject is OsuParsers.Beatmaps.Objects.Slider){
             OsuParsers.Beatmaps.Objects.Slider slider = (OsuParsers.Beatmaps.Objects.Slider) hitObject;
             SpawnSlider(slider);
@@ -711,6 +713,8 @@ public class BeatmapGame : MonoBehaviour {
         } else {
             SpawnBeat(hitObject);
         }
+
+        latestSpawnedHitObject += 1;
     }
 
     private TaikoColorExtended ColorRandomize(OsuParsers.Enums.Beatmaps.TaikoColor taikoColor){
@@ -729,27 +733,13 @@ public class BeatmapGame : MonoBehaviour {
         return (TaikoColorExtended) taikoColor;
     }
 
-    private Beat GetPreviousBeat(){
-        if (beats.Count <= 0){
-            return null;
-        }
-
-        return beats[latestSpawnedBeat - 1];
-    }
-
     private void SpawnBeat(OsuParsers.Beatmaps.Objects.HitObject hitObject, int delay = 0){
         Beat beat = Instantiate(beatPrefab, beatHolder);
         beat.hitObject = hitObject;
         beat.delay = delay;
         beat.offset = beat.hitObject.StartTime + delay;
 
-        beat.name = beat.name + latestSpawnedBeat;
-
-        Beat prevBeat = GetPreviousBeat();
-
-        if (hitObject is OsuParsers.Beatmaps.Objects.Slider){
-            // beat.GetComponent<MeshRenderer>().material.color = Color.black;
-        }
+        beat.name = beat.name + latestSpawnedHitObject;
 
         OsuParsers.Enums.Beatmaps.TaikoColor originalColor = OsuParsers.Enums.Beatmaps.TaikoColor.Blue;
 
@@ -769,39 +759,30 @@ public class BeatmapGame : MonoBehaviour {
 
         beat.color = ColorRandomize(originalColor);
 
-        if (prevBeat){
-
-            // If previous beat is within 50ms, force swap.
-            if (beat.offset - 50 <= prevBeat.offset){
-
-                // Bad algorithm... but randomize color every loop until it's not the same.
-                while (beat.color == prevBeat.color){
-                    beat.color = ColorRandomize(originalColor);
-                }
-            }
-        }
-
-        MeshRenderer lineMeshRenderer = beat.beatMeshRenderer;
+        MeshRenderer beatMeshRenderer = beat.beatMeshRenderer;
 
         if (beat.color == TaikoColorExtended.Blue){
-            lineMeshRenderer.material.color = Color.blue;
-            lineMeshRenderer.material.SetColor("_EmissionColor", Color.blue * 0.5f);
+            beatMeshRenderer.material.color = Color.blue;
+            beatMeshRenderer.material.SetColor("_EmissionColor", Color.blue * 0.5f);
         } else if (beat.color == TaikoColorExtended.Red) {
-            lineMeshRenderer.material.color = Color.red;
-            lineMeshRenderer.material.SetColor("_EmissionColor", Color.red * 0.5f);
+            beatMeshRenderer.material.color = Color.red;
+            beatMeshRenderer.material.SetColor("_EmissionColor", Color.red * 0.5f);
         } else if (beat.color == TaikoColorExtended.White) {
-            lineMeshRenderer.material.color = Color.white;
-            lineMeshRenderer.material.SetColor("_EmissionColor", Color.white * 0.5f);
+            beatMeshRenderer.material.color = Color.white;
+            beatMeshRenderer.material.SetColor("_EmissionColor", Color.white * 0.5f);
         } else if (beat.color == TaikoColorExtended.Green) {
-            lineMeshRenderer.material.color = Color.green;
-            lineMeshRenderer.material.SetColor("_EmissionColor", Color.green * 0.5f);
+            beatMeshRenderer.material.color = Color.green;
+            beatMeshRenderer.material.SetColor("_EmissionColor", Color.green * 0.5f);
+        }
+
+        if (hitObject is OsuParsers.Beatmaps.Objects.Slider || hitObject is OsuParsers.Beatmaps.Objects.Taiko.TaikoDrumroll){
+            beatMeshRenderer.material.color = Color.black;
         }
 
         // beat.transform.position = GetDrumTransformPair(ColorToDrum(beat.color)).drumMarkerTransform.position + Vector3.forward * ((float)(hitObject.StartTime + delay - songTimer)/(1000f / beatSpeed));
         beat.transform.position = CalculateBeatPosition(beat);
 
         beats.Add(beat);
-        latestSpawnedBeat += 1;
     }
 
     private void SpawnSlider(OsuParsers.Beatmaps.Objects.Slider slider){

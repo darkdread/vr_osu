@@ -541,6 +541,26 @@ public class GameManager : MonoBehaviour {
 		}
 	}
 
+    public static int CalculateBeatsPerMinute(OsuParsers.Beatmaps.Beatmap beatmap){
+        OsuParsers.Beatmaps.Objects.HitObject[] hitObjects = beatmap.HitObjects.ToArray();
+        int beatCount = 0;
+
+        foreach(OsuParsers.Beatmaps.Objects.HitObject hitObject in hitObjects){
+            if (hitObject is OsuParsers.Beatmaps.Objects.Slider || hitObject is OsuParsers.Beatmaps.Objects.Taiko.TaikoDrumroll){
+                OsuParsers.Beatmaps.Objects.Slider slider = (OsuParsers.Beatmaps.Objects.Slider) hitObject;
+                beatCount += slider.Repeats + 1;
+            } else {
+                beatCount += 1;
+            }
+        }
+
+        int duration = (hitObjects[hitObjects.Length - 1].EndTime - hitObjects[0].StartTime) / 1000;
+        int bpm = (int) (((float) beatCount / duration) * 60);
+
+        // beatCount = hitObjects.Length;
+        return bpm;
+    }
+
 	public static void LoadAllBeatmapsIntoMenu() {
         // Destroy all existing beatmaps.
         foreach(Transform t in instance.songMenuContent){
@@ -574,21 +594,33 @@ public class GameManager : MonoBehaviour {
 
             eventTrigger.triggers.Add(eventTriggerEntry);
 
-            int songId = 0;
-
             // Sort difficulty.
             // Difficulty isn't by approach rate =(
             // https://github.com/ppy/osu-difficulty-calculator
-            kvp.Value.Sort((x, y) => x.DifficultySection.ApproachRate.CompareTo(y.DifficultySection.ApproachRate));
+            // kvp.Value.Sort((x, y) => x.DifficultySection.ApproachRate.CompareTo(y.DifficultySection.ApproachRate));
 
-			foreach (OsuParsers.Beatmaps.Beatmap beatmap in kvp.Value) {
+            Dictionary<OsuParsers.Beatmaps.Beatmap, int> bpms = new Dictionary<OsuParsers.Beatmaps.Beatmap, int>();
+            foreach (OsuParsers.Beatmaps.Beatmap beatmap in kvp.Value) {
+                int bpm = CalculateBeatsPerMinute(beatmap);
+                bpms.Add(beatmap, bpm);
+            }
+
+            bpms = bpms.OrderBy(x => x.Value).ToDictionary(x => x.Key, x => x.Value);
+            List<OsuParsers.Beatmaps.Beatmap> orderedByBpms = bpms.Keys.ToList();
+
+            print($"{kvp.Key}");
+
+			foreach (OsuParsers.Beatmaps.Beatmap beatmap in kvp.Value.OrderBy(x => orderedByBpms.IndexOf(x))) {
+                int songId = kvp.Value.IndexOf(beatmap);
 				string beatmapVersion = beatmap.MetadataSection.Version;
                 string beatmapMode = beatmap.GeneralSection.Mode.ToString();
 				float difficulty = beatmap.DifficultySection.ApproachRate;
+                int bpm = bpms[beatmap];
+
+                print($"{beatmapVersion}: songId:{songId}: bpm:{bpm}");
 
                 if (beatmap.GeneralSection.Mode == OsuParsers.Enums.Ruleset.Mania){
                     print(string.Format("Skipping parsing of: Osz: {0}, version: {1}, mode: {2}", oszName, beatmapVersion, beatmap.GeneralSection.Mode));
-                    songId += 1;
                     continue;
                 }
 
@@ -610,10 +642,9 @@ public class GameManager : MonoBehaviour {
 
                 songButtonChild.beatmapTitle = beatmap.MetadataSection.Title;
                 songButtonChild.SetBeatmapData(oszName, songId);
-				songButtonChild.UpdateButton(beatmapVersion, difficulty.ToString(), beatmapMode);
+				// songButtonChild.UpdateButton(beatmapVersion, difficulty.ToString(), beatmapMode);
+                songButtonChild.UpdateButton(beatmapVersion, bpm.ToString(), beatmapMode);
 				songButton.AddSongButtonChild(songButtonChild);
-
-                songId += 1;
 			}
 		}
 
